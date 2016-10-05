@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Neural Quake", "Neural Quake.vcxproj", "{24E5527A-01B5-4671-9FAE-BF1B43B18151}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		DX8 Debug|Win32 = DX8 Debug|Win32
+		DX8 Release|Win32 = DX8 Release|Win32
+		GL Debug|Win32 = GL Debug|Win32
+		GL Release|Win32 = GL Release|Win32
+		Release|Win32 = Release|Win32
+		SDL Debug|Win32 = SDL Debug|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.Debug|Win32.ActiveCfg = Debug|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.Debug|Win32.Build.0 = Debug|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.DX8 Debug|Win32.ActiveCfg = DX8 Debug|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.DX8 Debug|Win32.Build.0 = DX8 Debug|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.DX8 Release|Win32.ActiveCfg = DX8 Release|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.DX8 Release|Win32.Build.0 = DX8 Release|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.GL Debug|Win32.ActiveCfg = GL Debug|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.GL Debug|Win32.Build.0 = GL Debug|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.GL Release|Win32.ActiveCfg = GL Release|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.GL Release|Win32.Build.0 = GL Release|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.Release|Win32.ActiveCfg = Release|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.Release|Win32.Build.0 = Release|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.SDL Debug|Win32.ActiveCfg = SDL Debug|Win32
+		{24E5527A-01B5-4671-9FAE-BF1B43B18151}.SDL Debug|Win32.Build.0 = SDL Debug|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
