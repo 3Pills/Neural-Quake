@@ -550,6 +550,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </CustomBuild>
+    <ClInclude Include="src\gene.h" />
+    <ClInclude Include="src\genome.h" />
     <ClInclude Include="src\gl_renderer.h" />
     <CustomBuild Include="src\gl_texmgr.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -559,8 +561,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </CustomBuild>
+    <ClInclude Include="src\innovation.h" />
     <ClInclude Include="src\input.h" />
     <ClInclude Include="src\keys.h" />
+    <ClInclude Include="src\link.h" />
     <ClInclude Include="src\location.h" />
     <ClInclude Include="src\mark_v_lmp.h" />
     <ClInclude Include="src\menu.h" />
@@ -568,8 +572,10 @@
     <ClInclude Include="src\modelgen.h" />
     <ClInclude Include="src\movie.h" />
     <ClInclude Include="src\msinttypes\stdint.h" />
+    <ClInclude Include="src\neural_def.h" />
     <ClInclude Include="src\nehahra.h" />
     <ClInclude Include="src\net.h" />
+    <ClInclude Include="src\network.h" />
     <ClInclude Include="src\net_admin.h" />
     <ClInclude Include="src\net_defs.h" />
     <ClInclude Include="src\net_dgrm.h" />
@@ -578,6 +584,8 @@
     <ClInclude Include="src\net_udp.h" />
     <ClInclude Include="src\net_vcr.h" />
     <ClInclude Include="src\neural.h" />
+    <ClInclude Include="src\neuron.h" />
+    <ClInclude Include="src\organism.h" />
     <ClInclude Include="src\progdefs.h" />
     <ClInclude Include="src\progs.h" />
     <ClInclude Include="src\protocol.h" />
@@ -625,6 +633,7 @@
     </CustomBuild>
     <ClInclude Include="src\server.h" />
     <ClInclude Include="src\sound.h" />
+    <ClInclude Include="src\species.h" />
     <ClInclude Include="src\spritegn.h" />
     <ClInclude Include="src\sys.h" />
     <ClInclude Include="src\talk_macro.h" />
@@ -641,7 +650,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </CustomBuild>
+    <ClInclude Include="src\trait.h" />
     <ClInclude Include="src\utilities.h" />
+    <ClInclude Include="src\vector.h" />
     <ClInclude Include="src\vid.h" />
     <CustomBuild Include="src\vid_wglext.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='SDL Debug|Win32'">true</ExcludedFromBuild>
@@ -821,6 +832,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GL Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='SDL Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\gene.c" />
+    <ClCompile Include="src\genome.c" />
     <ClCompile Include="src\gl_alias.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -883,6 +896,7 @@
     </ClCompile>
     <ClCompile Include="src\host.c" />
     <ClCompile Include="src\host_cmd.c" />
+    <ClCompile Include="src\innovation.c" />
     <ClCompile Include="src\input.c" />
     <ClCompile Include="src\in_sdl.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DX8 Debug|Win32'">true</ExcludedFromBuild>
@@ -896,6 +910,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='SDL Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="src\keys.c" />
+    <ClCompile Include="src\link.c" />
     <ClCompile Include="src\location.c" />
     <ClCompile Include="src\main_central.c" />
     <ClCompile Include="src\menu.c" />
@@ -903,6 +918,7 @@
     <ClCompile Include="src\movie.c" />
     <ClCompile Include="src\movie_win.c" />
     <ClCompile Include="src\nehahra.c" />
+    <ClCompile Include="src\network.c" />
     <ClCompile Include="src\net_admin.c" />
     <ClCompile Include="src\net_bsd.c" />
     <ClCompile Include="src\net_dgrm.c" />
@@ -910,6 +926,8 @@
     <ClCompile Include="src\net_main.c" />
     <ClCompile Include="src\net_udp.c" />
     <ClCompile Include="src\neural.c" />
+    <ClCompile Include="src\neuron.c" />
+    <ClCompile Include="src\organism.c" />
     <ClCompile Include="src\pr_cmds.c" />
     <ClCompile Include="src\pr_edict.c" />
     <ClCompile Include="src\pr_exec.c" />
@@ -1017,6 +1035,7 @@
     <ClCompile Include="src\snd_win.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='SDL Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\species.c" />
     <ClCompile Include="src\sv_main.c" />
     <ClCompile Include="src\sv_move.c" />
     <ClCompile Include="src\sv_phys.c" />
@@ -1046,8 +1065,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\trait.c" />
     <ClCompile Include="src\utilities.c" />
     <ClCompile Include="src\utilities_install.c" />
+    <ClCompile Include="src\vector.c" />
     <ClCompile Include="src\vid.c" />
     <ClCompile Include="src\vid_sdlgl.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DX8 Debug|Win32'">true</ExcludedFromBuild>

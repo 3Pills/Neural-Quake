@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // neural.cpp -- Function definitions for neural network implementations
 
 #include "quakedef.h"
+#include <math.h>
 
 void Neural_Init() {
 	return;
@@ -50,3 +51,15 @@ TERMINAL CONDITION -'
 STOP
 
 */
+
+// Steepened Sigmoid activation function for neurons in our NEAT neural network.
+double Sigmoid(double x) 
+{
+	return (1.0 / (1.0 + exp(-4.9*x)));
+}
+
+// Returns a random integer value between x and y
+int RandomInt(int x, int y)
+{
+	return rand() % (y - x + 1) + x;
+}

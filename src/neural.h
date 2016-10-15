@@ -21,13 +21,15 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// neural.h -- Class definitions for neural network implementation
+// neural.h -- Bridge between neural AI and the rest of the application.
 
 #ifndef __NEURAL_H__
 #define __NEURAL_H__
 
+/*
 #ifdef __cplusplus
 #include <vector>
+
 // Defines the connection between neurons
 class Gene
 {
@@ -90,18 +92,65 @@ private:
 
 };
 #else
-void Neural_Init();
+*/
 
+#include "vector.h"
+#include "math_general.h"
+#include "neural_def.h"
 
+/*
+typedef struct vector;
+typedef struct neuron_t;
+
+typedef struct 
+{
+	vector outputGenes; // vector array of outgoing Genes.
+	vector inputGenes; // vector array of incoming Genes.
+	int outputValue; // The Value output by the Neuron.
+} neuron_t; // Genetic nodes which make up a neural network
 
 typedef struct
 {
-	int m_iTo; // Input neuron ID.
-	int m_iFrom; // Output neuron ID.
-	int m_iInnovation; // Used for finding corresponding genes during crossover.
-	float m_fWeight; // Weight of genetic connection.
-	cbool m_bEnabled; // Stops the genome using it.
-} gene_t;
-#endif
+	neuron_t* in_node; // Input neuron.
+	neuron_t* out_node; // Output neuron.
+
+	cbool recurrent;
+	cbool time_delay;
+
+	int trait_id; // identify the trait derived by this link.
+
+	int added_weight;
+	int params[NQ_NUM_TRAIT_PARAMS];
+
+} link_t; // Link between two neural nodes.
+
+typedef struct
+{
+	int ID;
+	int fitness; // Determined fitness of the Genome.
+
+	vector genes; // Pointer to array of Genes.
+	vector neurons; // Pointer to array of Neurons.
+
+} genome_t; // Network of neurons connected by genes.
+
+typedef struct
+{
+	vector genomes;
+} species_t; // Collection of Genomes that hold a specific trait.
+
+typedef struct
+{
+	vector species;
+} network_t; // The entire pool of species.
+*/
+
+void Neural_Init();
+
+double Sigmoid(double x); 
+
+int Random_Int(int x, int y);
+
+//#endif
 
 #endif // !__NEURAL_H__
