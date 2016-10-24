@@ -24,8 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 enum innov_type_e
 {
-	NEWNODE = 0,
-	NEWLINK = 1
+	NQ_NEWNODE = 0,
+	NQ_NEWLINK = 1
 };
 
 typedef struct innovation_s
@@ -48,12 +48,12 @@ typedef struct innovation_s
 } innovation_t;
 
 //Constructor for the new node case
-innovation_t Innovation_Init_Node(int nin, int nout, double num1, double num2, int newid, double oldinnov);
+innovation_t* Innovation_Init(int nin, int nout, double num1, double num2, int newid, double oldinnov);
 
 //Constructor for new link case
-innovation_t Innovation_Init_Link(int nin, int nout, double num1, double w, int t);
+innovation_t* Innovation_Init_Link(int nin, int nout, double num1, double w, int t);
 
 //Constructor for a recur link
-innovation_t Innovation_Init_Link_Recur(int nin, int nout, double num1, double w, int t, cbool recur);
+innovation_t* Innovation_Init_Link_Recur(int nin, int nout, double num1, double w, int t, cbool recur);
 
 #endif //! __INNOVATION_H__

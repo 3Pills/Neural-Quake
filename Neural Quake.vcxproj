@@ -550,6 +550,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </CustomBuild>
+    <ClInclude Include="src\evolution.h" />
     <ClInclude Include="src\gene.h" />
     <ClInclude Include="src\genome.h" />
     <ClInclude Include="src\gl_renderer.h" />
@@ -586,6 +587,7 @@
     <ClInclude Include="src\neural.h" />
     <ClInclude Include="src\neuron.h" />
     <ClInclude Include="src\organism.h" />
+    <ClInclude Include="src\population.h" />
     <ClInclude Include="src\progdefs.h" />
     <ClInclude Include="src\progs.h" />
     <ClInclude Include="src\protocol.h" />
@@ -606,6 +608,7 @@
     <ClInclude Include="src\q_stdinc.h" />
     <ClInclude Include="src\recent_file.h" />
     <ClInclude Include="src\render.h" />
+    <ClInclude Include="src\r_neural.h" />
     <ClInclude Include="src\resource.h" />
     <CustomBuild Include="src\r_local.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DX8 Debug|Win32'">true</ExcludedFromBuild>
@@ -832,6 +835,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GL Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='SDL Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\evolution.c" />
     <ClCompile Include="src\gene.c" />
     <ClCompile Include="src\genome.c" />
     <ClCompile Include="src\gl_alias.c">
@@ -928,6 +932,7 @@
     <ClCompile Include="src\neural.c" />
     <ClCompile Include="src\neuron.c" />
     <ClCompile Include="src\organism.c" />
+    <ClCompile Include="src\population.c" />
     <ClCompile Include="src\pr_cmds.c" />
     <ClCompile Include="src\pr_edict.c" />
     <ClCompile Include="src\pr_exec.c" />
@@ -936,6 +941,7 @@
     <ClCompile Include="src\q_mathlib.c" />
     <ClCompile Include="src\q_music.c" />
     <ClCompile Include="src\recent_file.c" />
+    <ClCompile Include="src\r_neural.c" />
     <ClCompile Include="src\r_aclip.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DX8 Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DX8 Release|Win32'">true</ExcludedFromBuild>
@@ -1245,8 +1251,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='SDL Debug|Win32'">true</ExcludedFromBuild>
     </CustomBuild>
-    <None Include="progdefs.q1" />
-    <None Include="progdefs.q2" />
     <CustomBuild Include="src\QAboutPanel.m">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DX8 Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DX8 Release|Win32'">true</ExcludedFromBuild>
@@ -1319,6 +1323,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='SDL Debug|Win32'">true</ExcludedFromBuild>
     </CustomBuild>
+    <None Include="src\progdefs.q1" />
+    <None Include="src\progdefs.q2" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\mark_v_glquake.ico" />

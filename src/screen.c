@@ -1417,6 +1417,7 @@ void SCR_UpdateScreen (void)
 		SCR_DrawCrosshair ();  // Baker:moved
 		Sbar_Draw ();
 		SCR_DrawDevStats (); //johnfitz
+		SCR_DrawNeuralData (); // stephenkoren
 		SCR_DrawFPS (); // johnfitz
 		SCR_DrawConsole ();
 #ifdef SUPPORTS_HTTP_DOWNLOAD

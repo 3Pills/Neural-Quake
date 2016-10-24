@@ -26,6 +26,7 @@ CVAR_DEF( Utilities_Init, CLIENT,  DEP_NONE , install_depot_source, "install_dep
 CVAR_DEF( COM_InitFilesystem,HOST,  DEP_NONE , cmdline                   , "cmdline"                 , ""        , CVAR_SERVERINFO   , NULL                 ,  ""            )
 CVAR_DEF( Host_Init   , HOST      ,  DEP_NONE , developer                 , "developer"               , "0"       , CVAR_NONE         , NULL                 ,  ""            )
 CVAR_DEF( Host_Init   , HOST      ,  DEP_NONE , devstats                  , "devstats"                , "0"       , CVAR_NONE         , NULL                 ,  ""            ) // johnfitz -- track developer statistics that vary every frame
+CVAR_DEF( Host_Init   , HOST      ,  DEP_NONE , neuraldisplay             , "neuraldisplay"           , "1"       , CVAR_NONE         , NULL                 ,  ""            ) // stephenkoren -- flag to display debug info for neural network
 CVAR_DEF( Host_Init   , HOST      ,  DEP_NONE , host_framerate            , "host_framerate"          , "0"       , CVAR_NONE         , NULL                 ,  ""            ) // set for slow motion
 //CVAR_DEF( Host_Init   , HOST      ,  DEP_NONE , host_max_edicts           , "max_edicts"              , "0"       , CVAR_NONE         , Max_Edicts_f         ,  ""            ) // Baker: 0 = automatic
 CVAR_DEF( Host_Init   , HOST      ,  DEP_NONE , host_maxfps               , "host_maxfps"             , "72"      , CVAR_ARCHIVE      , NULL                 ,  ""            ) // johnfitz
@@ -146,6 +147,9 @@ CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_speeds                  , "r_s
 CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_stains                  , "r_stains"                , "1"       , CVAR_ARCHIVE      , Stain_Change_f       ,  ""            )
 CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_stains_fadeamount       , "r_stains_fadeamount"     , "1"       , CVAR_NONE         , NULL                 ,  ""            )
 CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_stains_fadetime         , "r_stains_fadetime"       , "1"       , CVAR_NONE         , NULL                 ,  ""            )
+CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_neural_color_1          , "r_neural_color_1"        , "251"     , CVAR_NONE         , NULL                 ,  ""            ) // stephenkoren -- First color used within neural network debug drawing.
+CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_neural_color_2          , "r_neural_color_2"        , "192"     , CVAR_NONE         , NULL                 ,  ""            ) // stephenkoren -- Second color used within neural network debug drawing.
+CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_neural_alpha	          , "r_neural_alpha"	      , "1"		  , CVAR_NONE         , NULL                 ,  ""            ) // stephenkoren -- Alpha used within neural network debug drawing.
 CVAR_DEF( D_Init      , SCENE     ,  DEP_SW   , sw_d_mipscale             , "d_mipscale"              , "1"       , CVAR_NONE         , NULL                 ,  ""            )
 CVAR_DEF( D_Init      , SCENE     ,  DEP_SW   , sw_d_subdiv16             , "d_subdiv16"              , "1"       , CVAR_NONE         , NULL                 ,  ""            )
 CVAR_DEF( R_Init      , SCENE     ,  DEP_SW   , sw_r_aliasstats           , "r_polymodelstats"        , "0"       , CVAR_NONE         , NULL                 ,  ""            )

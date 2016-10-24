@@ -76,7 +76,7 @@ extern float load_subdivide_size; //johnfitz -- remember what subdivide_size val
 
 // Multitexture
 extern cbool mtexenabled;
-#pragma message ("Baker: This mtexenabled is used by GL_DrawAliasFrame and I don't think it should be")
+// #pragma message ("Baker: This mtexenabled is used by GL_DrawAliasFrame and I don't think it should be")
 
 //johnfitz -- polygon offset
 #define OFFSET_BMODEL 1

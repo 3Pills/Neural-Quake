@@ -831,6 +831,7 @@ void Host_Init (void)
 		CDAudio_Init,
 		Sbar_Init,
 		CL_Init,
+		Neural_Init, // StephenKoren: Neural AI initialization.
 		Recent_File_Init,
 		Utilities_Init,
 		Courtesy_Cvars, // Baker: Register our courtesy cvars so WinQuake/GLQuake versions keep each others values

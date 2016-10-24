@@ -21,17 +21,31 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define __TRAIT_H__
 
 #include "neural_def.h"
+#include <stdarg.h>
+#include <stdlib.h>
 
 typedef struct trait_s
 {
 	int id;
-	double params[NQ_NUM_TRAIT_PARAMS];
+	double params[NQ_TRAIT_NUM_PARAMS];
 } trait_t; // Collection of Genomes that hold a specific trait.
 
-trait_t Trait_Init(void); // Base Constructor
-trait_t Trait_Init_Copy(const trait_t t); // Copy Constructor
-trait_t Trait_Init_Merge(const trait_t t1, const trait_t t2); // Constructor which averages 2 existing traits.
+// Base Constructor
+trait_t *Trait_Init(void);
 
-void Trait_Mutate(); // Perturb trait parameters slightly.
+// Initialize all values in the trait. 
+// The first argument should be the number of arguments following it, the second 
+// should be the ID of the trait, then a list of trait params of size NQ_TRAIT_NUM_PARAMS.
+trait_t *Trait_Init_Values(int num_args, ...);
+
+// Copy Constructor
+trait_t *Trait_Init_Copy(trait_t* t);
+
+// Creates a trait which averages 2 existing traits.
+trait_t *Trait_Init_Merge(trait_t* t1, trait_t* t2);
+
+void Trait_Delete(trait_t* trait);
+
+void Trait_Mutate(trait_t* trait); // Perturb trait parameters slightly.
 
 #endif // !__TRAIT_H__

@@ -17,6 +17,9 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+//gene.h - Contains class definition for genetic data stored on neural links.
+//NOTE: Based heavily on Kenneth O. Stanley's C++ implementation of neural networks.
+
 #ifndef __GENE_H__
 #define __GENE_H__
 
@@ -36,23 +39,26 @@ typedef struct gene_s
 	cbool enabled; // Disables the gene.
 	cbool frozen; // Stops the gene from mutating.
 
-	link_t *link; // Genetic link data.
+	nlink_t *link; // Genetic link data.
 } gene_t; // Defines the connection between neurons.
 
 // Construct a gene without a trait.
-gene_t Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum);
+gene_t* Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum);
 
 // Construct a gene with a trait.
-gene_t Gene_Init_Trait(trait_t* trait, double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum);
+gene_t* Gene_Init_Trait(trait_t* trait, double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum);
+
+//Construct a gene off of another gene as a duplicate
+gene_t* Gene_Init_Dupe(gene_t *g, trait_t *tp, neuron_t *inode, neuron_t *onode);
 
 // Duplicate a gene from another existing gene.
-gene_t Gene_Init_Copy(const gene_t g);
+gene_t* Gene_Init_Copy(gene_t* g);
 
 // Construct a gene from a file spec given traits and nodes.
-gene_t Gene_Init_File(const char *argline, vector traits, vector nodes);
+gene_t* Gene_Init_File(const char *argline, vector *traits, vector *nodes);
 
 // Delete a gene
-void Gene_Delete();
+void Gene_Delete(gene_t* gene);
 
 // Print gene to a file. Called from Genome.
 void Gene_Print(FILE *outFile);

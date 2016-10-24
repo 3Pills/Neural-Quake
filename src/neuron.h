@@ -25,90 +25,112 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // The type of node.
 enum nodetype_e {
-	NEURON = 0,
-	SENSOR = 1
+	NQ_NEURON = 0,
+	NQ_SENSOR = 1
 };
+
 
 // List of layers within the network. Bias is a special layer case.
 enum nodeplace_e {
-	HIDDEN = 0,
-	INPUT = 1,
-	OUTPUT = 2,
-	BIAS = 3
+	NQ_HIDDEN = 0,
+	NQ_INPUT = 1,
+	NQ_OUTPUT = 2,
+	NQ_BIAS = 3
 };
 
 // List of supported activation functions.
 enum functype_e {
-	SIGMOID = 0
+	NQ_SIGMOID = 0
 };
 
-typedef struct link_s link_t;
+typedef struct nlink_s nlink_t;
 typedef struct network_s network_t;
 
 typedef struct neuron_s
 {
-	int activation_count; 
-	double last_activation, last_activation2;
+	int activation_count; // keeps track of which activation the node is currently in
+	double last_activation; // Holds the previous step's activation for recurrency
+	double last_activation2; // Holds the activation BEFORE the prevous step's
 
-	trait_t* trait; 
-	int trait_id;
+	trait_t* trait; // Points to a trait of parameters
+	int trait_id; // identify the trait derived by this node
 
-	neuron_t* dupe;
-	neuron_t* analogue;
+	neuron_t* dupe; // Used for Genome duplication
+	neuron_t* analogue; // Used for Gene decoding
 
-	cbool override;
-	double override_value;
+	cbool override; // The NNode cannot compute its own output- something is overriding it
+	double override_value; // Contains the activation value that will override this node's activation
 
-	vector links_out; // Contains: link_t. Vector array of outgoing Links.
-	vector links_in; // Contains: link_t. Vector array of incoming Links.
+	vector* links_out; // Contains: nlink_t. Vector array of outgoing Links.
+	vector* links_in; // Contains: nlink_t. Vector array of incoming Links.
 
-	int output_value; // The Value output by the Neuron.
+	int value; // The Value output by the Neuron.
 
 	cbool frozen;
 
+	enum nodetype_e type; // Neuron type. Either NEURON or SENSOR.
 	enum functype_e fType; // Activation function type. Can be changed to support things other than sigmoid.
-	enum nodetype_e nType; // Either NEURON or SENSOR.
 
-	double activesum;
-	double activation;
+	double activesum; // The incoming activity before being processed 
+	double activation; // The total activation entering the NNode 
+	cbool active_flag; // To make sure outputs are active
 
-	cbool active_flag;
+	double params[NQ_TRAIT_NUM_PARAMS];
 
-	double params[NQ_NUM_TRAIT_PARAMS];
-
-	vector rowLevels; // Contains: double. Depth from output where this node appears.
+	vector* rowLevels; // Contains: double. Depth from output where this node appears.
 
 	int row;
 	int ypos;
 	int xpos;
 
-	int nodeID; // Identification for file output
-	
+	int node_id; // Identification for file output
 	enum nodeplace_e node_label;
 } neuron_t; // Genetic nodes which make up a neural network
 
-neuron_t Neuron_Init(enum nodetype_e nType, int nodeID);
+neuron_t* Neuron_Init(enum nodetype_e type, int node_id);
 
-neuron_t Neuron_Init_Placement(enum nodetype_e nType, int nodeID, enum nodeplace_e placement);
+neuron_t* Neuron_Init_Placement(enum nodetype_e type, int node_id, enum nodeplace_e placement);
 
 // Construct a node using another as a base, for genome purposes.
-neuron_t Neuron_Init_Derived(neuron_t* node, trait_t* trait);
+neuron_t* Neuron_Init_Derived(neuron_t* other, trait_t* trait);
 
 // Copy constructor.
-neuron_t Neuron_Init_Copy(neuron_t node);
+neuron_t* Neuron_Init_Copy(neuron_t* other);
 
-void Neuron_Flushback();
+// Delete object helper
+void Neuron_Delete(neuron_t* node);
 
-void Neuron_Flushback_Check();
+// If the node is a SENSOR, returns true and loads the value
+cbool Neuron_Sensor_Load(neuron_t* node, double value);
 
-void Neuron_Derive_Trait(trait_t *curTrait);
+// Just return activation for step
+double Neuron_Get_Active_Out(neuron_t* node);
 
-void Neuron_Override_Output(double new_output);
+// Return activation from PREVIOUS time step
+double Neuron_Get_Active_Out_TD(neuron_t* node);
 
-void Neuron_Activate_Override();
+// Adds a Link to a new NNode in the incoming List
+void Neuron_Add_Incoming_Recurring(neuron_t* node, neuron_t* other, double w, cbool recur);
 
-void Neuron_Lamarck();
+// Adds a NONRECURRENT Link to a new NNode in the incoming List
+void Neuron_Add_Incoming(neuron_t* node, neuron_t* other, double w);
 
-void Neuron_Depth(int d, network_t* net);
+// Recursively deactivate backwards through the network
+void Neuron_Flushback(neuron_t* node);
+
+// Verify flushing for debugging
+void Neuron_Flushback_Check(neuron_t* node, vector* seenlist);
+
+// Have Neuron gain its properties from the trait
+void Neuron_Derive_Trait(neuron_t* node, trait_t *curtrait);
+
+// Force an output value on the node
+void Neuron_Override_Output(neuron_t* node, double new_output);
+
+// Set activation to the override value and turn off override
+void Neuron_Activate_Override(neuron_t* node);
+
+//Find the greatest depth starting from this neuron at depth d
+int Neuron_Depth(neuron_t* node, int d, network_t* net);
 
 #endif // !__NEURON_H__

@@ -464,6 +464,15 @@
     <ClInclude Include="src\innovation.h">
       <Filter>Source Files\Neural AI\Type Definitions</Filter>
     </ClInclude>
+    <ClInclude Include="src\population.h">
+      <Filter>Source Files\Neural AI\Type Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="src\evolution.h">
+      <Filter>Source Files\Neural AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\r_neural.h">
+      <Filter>Source Files\Neural AI\Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main_central.c">
@@ -994,10 +1003,19 @@
     <ClCompile Include="src\innovation.c">
       <Filter>Source Files\Neural AI\Type Definitions</Filter>
     </ClCompile>
+    <ClCompile Include="src\population.c">
+      <Filter>Source Files\Neural AI\Type Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="src\evolution.c">
+      <Filter>Source Files\Neural AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\r_neural.c">
+      <Filter>Source Files\Neural AI\Utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="progdefs.q1" />
-    <None Include="progdefs.q2" />
+    <None Include="src\progdefs.q1" />
+    <None Include="src\progdefs.q2" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\mark_v_glquake.ico">

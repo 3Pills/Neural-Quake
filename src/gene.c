@@ -22,50 +22,65 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "link.h"
 #include "stdlib.h"
 
-gene_t Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum) 
+gene_t* Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum) 
 {
-	gene_t gene;
+	gene_t* gene = malloc(sizeof(gene_t));
 
-	link_t link = Link_Init(w, in_node, out_node, recurring);
-	gene.link = &link;
-	gene.innovation_num = innov;
-	gene.mutation_num = mnum;
-
-	gene.enabled = true;
-
-	gene.frozen = false;
+	gene->link = Link_Init(w, in_node, out_node, recurring);
+	gene->innovation_num = innov;
+	gene->mutation_num = mnum;
+	gene->enabled = true;
+	gene->frozen = false;
 
 	return gene;
 }
 
 // Construct a gene with a trait.
-gene_t Gene_Init_Trait(trait_t* trait, double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum) 
+gene_t* Gene_Init_Trait(trait_t* trait, double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum) 
 {
-	gene_t gene;
+	gene_t* gene = malloc(sizeof(gene_t));
+
+	gene->link = Link_Init_Trait(trait, w, in_node, out_node, recurring);
+	gene->innovation_num = innov;
+	gene->mutation_num = mnum;
+	gene->enabled = true;
+	gene->frozen = false;
+
+	return gene;
+}
+
+gene_t* Gene_Init_Dupe(gene_t *g, trait_t *tp, neuron_t *inode, neuron_t *onode)
+{
+	gene_t* gene = malloc(sizeof(gene_t));
+
+	gene->link = Link_Init_Trait(tp, (g->link)->weight, inode, onode, (g->link)->recurrent);
+	gene->innovation_num = g->innovation_num;
+	gene->mutation_num = g->mutation_num;
+	gene->enabled = g->enabled;
+
+	gene->frozen = g->frozen;
 
 	return gene;
 }
 
 // Duplicate a gene from another existing gene.
-gene_t Gene_Init_Copy(const gene_t g)
+gene_t* Gene_Init_Copy(gene_t* g)
 {
-	gene_t gene;
+	gene_t* gene = malloc(sizeof(gene_t));
 
-	gene.innovation_num = g.innovation_num;
-	gene.mutation_num = g.mutation_num;
-	gene.enabled = g.enabled;
-	gene.frozen = g.frozen;
-
-	link_t link = Link_Init_Copy(*g.link);
-	gene.link = &link;
+	gene->link = Link_Init_Copy(g->link);
+	gene->innovation_num	= g->innovation_num;
+	gene->mutation_num		= g->mutation_num;
+	gene->enabled			= g->enabled;
+	gene->frozen			= g->frozen;
 
 	return gene;
 }
 
 
-gene_t Gene_Init_File(const char *argline, vector traits, vector nodes)
+gene_t* Gene_Init_File(const char *argline, vector *traits, vector *nodes)
 {
-	gene_t gene;
+	gene_t* gene = malloc(sizeof(gene_t));
 	return gene;
 }
 
@@ -98,7 +113,7 @@ gene_t Gene_Init(const char *argline, vector traits, vector nodes)
 
 	frozen = false; //TODO: MAYBE CHANGE
 
-	//Get a pointer to the linktrait
+	//Get a pointer to the trait
 	if (traitnum == 0) traitptr = 0;
 	else {
 		curtrait = traits.begin();
@@ -125,9 +140,10 @@ gene_t Gene_Init(const char *argline, vector traits, vector nodes)
 }
 */
 
-void Gene_Delete()
+void Gene_Delete(gene_t* gene)
 {
-
+	Link_Delete(gene->link);
+	free(gene);
 }
 
 // Print gene to a file. Called from Genome.

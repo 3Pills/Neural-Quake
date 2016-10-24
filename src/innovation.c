@@ -19,57 +19,57 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "innovation.h"
 
-innovation_t Innovation_Init_Node(int nin, int nout, double num1, double num2, int newid, double oldinnov) {
-	innovation_t innovation;
+innovation_t* Innovation_Init(int nin, int nout, double num1, double num2, int newid, double oldinnov) {
+	innovation_t* innovation = malloc(sizeof(innovation_t));
 
-	innovation.innovation_type = NEWNODE;
-	innovation.node_in_id = nin;
-	innovation.node_out_id = nout;
-	innovation.innovation_num1 = num1;
-	innovation.innovation_num2 = num2;
-	innovation.new_node_id = newid;
-	innovation.old_innov_num = oldinnov;
+	innovation->innovation_type = NQ_NEWNODE;
+	innovation->node_in_id = nin;
+	innovation->node_out_id = nout;
+	innovation->innovation_num1 = num1;
+	innovation->innovation_num2 = num2;
+	innovation->new_node_id = newid;
+	innovation->old_innov_num = oldinnov;
 
 	//Unused parameters set to zero
-	innovation.new_weight = 0;
-	innovation.new_trait_num = 0;
-	innovation.recur_flag = false;
+	innovation->new_weight = 0;
+	innovation->new_trait_num = 0;
+	innovation->recur_flag = false;
 
 	return innovation;
 }
 
-innovation_t Innovation_Init_Link(int nin, int nout, double num1, double w, int t) {
-	innovation_t innovation;
+innovation_t* Innovation_Init_Link(int nin, int nout, double num1, double w, int t) {
+	innovation_t* innovation = malloc(sizeof(innovation_t));
 
-	innovation.innovation_type = NEWLINK;
-	innovation.node_in_id = nin;
-	innovation.node_out_id = nout;
-	innovation.innovation_num1 = num1;
-	innovation.new_weight = w;
-	innovation.new_trait_num = t;
+	innovation->innovation_type = NQ_NEWLINK;
+	innovation->node_in_id = nin;
+	innovation->node_out_id = nout;
+	innovation->innovation_num1 = num1;
+	innovation->new_weight = w;
+	innovation->new_trait_num = t;
 
 	//Unused parameters set to zero
-	innovation.innovation_num2 = 0;
-	innovation.new_node_id = 0;
-	innovation.recur_flag = false;
+	innovation->innovation_num2 = 0;
+	innovation->new_node_id = 0;
+	innovation->recur_flag = false;
 
 	return innovation;
 }
 
-innovation_t Innovation_Init_Link_Recur(int nin, int nout, double num1, double w, int t, cbool recur) {
-	innovation_t innovation;
+innovation_t* Innovation_Init_Link_Recur(int nin, int nout, double num1, double w, int t, cbool recur) {
+	innovation_t* innovation = malloc(sizeof(innovation_t));
 
-	innovation.innovation_type = NEWLINK;
-	innovation.node_in_id = nin;
-	innovation.node_out_id = nout;
-	innovation.innovation_num1 = num1;
-	innovation.new_weight = w;
-	innovation.new_trait_num = t;
+	innovation->innovation_type = NQ_NEWLINK;
+	innovation->node_in_id = nin;
+	innovation->node_out_id = nout;
+	innovation->innovation_num1 = num1;
+	innovation->new_weight = w;
+	innovation->new_trait_num = t;
 
 	//Unused parameters set to zero
-	innovation.innovation_num2 = 0;
-	innovation.new_node_id = 0;
-	innovation.recur_flag = recur;
+	innovation->innovation_num2 = 0;
+	innovation->new_node_id = 0;
+	innovation->recur_flag = recur;
 
 	return innovation;
 }

@@ -21,28 +21,67 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __neural_def__
 #define __neural_def__
 
+#define NQ_POP_SIZE 500
+
 #define NQ_INPUT_COUNT 135 // Input is the result of 15 by 9 rays cast outwards from the player to their immediate view.
-#define NQ_OUTPUT_COUNT 8 // WASD + Jump + Shoot + X/Y Aim Axis
+#define NQ_OUTPUT_COUNT 10 // WASD + Jump + Shoot + Aiming Inputs(X+, X-, Y+, Y-) 
 
 #define NQ_TIMEOUT 20 // Time in seconds before savestate is reloaded after player idles.
 
 #define NQ_RECENT_AVERAGE_FACTOR 100 // Number of previous training samples to average.
 
-#define NQ_NUM_TRAIT_PARAMS 8
+#define NQ_TRAIT_NUM_PARAMS 8 // Number of parameters in each trait.
+#define NQ_TRAIT_PARAM_MUT_PROB 0.5 // Probability of trait parameter to mutate during reproduction.
 
-#define NQ_LINK_MUTATION_CHANCE 2.0
-#define NQ_NODE_MUTATION_CHANCE 0.5
-#define NQ_BIAS_MUTATION_CHANCE 0.4
+#define NQ_TRAIT_MUT_POWER 1.0
+#define NQ_WEIGHT_MUT_POWER 1.0
+
+#define NQ_DISJOINT_COEFF 1.0 // Coefficient for genome compatibility testing.
+#define NQ_EXCESS_COEFF 1.0 // Coefficient for genome compatibility testing.
+#define NQ_MUTDIFF_COEFF 0.4 // Coefficient for genome compatibility testing.
+
+#define NQ_MUTATE_RAND_TRAIT_PROB 0.1 // Chance for random trait to mutate during reproduction.
+#define NQ_MUTATE_LINK_TRAIT_PROB 0.1 // Chance for link trait to mutate during reproduction.
+#define NQ_MUTATE_NODE_TRAIT_PROB 0.1 // Chance for node trait to mutate during reproduction.
+#define NQ_MUTATE_BIAS_TRAIT_PROB 0.4 // Chance for bias to mutate during reproduction.
+
+#define NQ_MUTATE_ADD_LINK_PROB 0.03 // Chance for link to be added to a genome during reproduction.
+#define NQ_MUTATE_ADD_NODE_PROB 0.01 // Chance for node to be added to a genome during reproduction.
+
+#define NQ_MUTATE_LINK_WEIGHTS_PROB 0.9 // Chance for link weights to mutate.
 
 #define NQ_STEP_SIZE 0.1
 
 #define NQ_DISABLE_MUTATION_CHANCE 0.4
 #define NQ_ENABLE_MUTATION_CHANCE 0.2
 
+#define NQ_MUTATE_TOGGLE_ENABLE_PROB 0.1
+#define NQ_MUTATE_GENE_REENABLE_PROB 0.05
+
+#define NQ_AGE_SIGNIFICANCE 1.0
+
+#define NQ_DROPOFF_AGE 15
+
+#define NQ_SURVIVAL_THRESHOLD 0.20
+#define NQ_COMPAT_THRESHOLD 3.0
+
+#define NQ_RECUR_ONLY_CHANCE 0.2
+
+#define NQ_NEWLINK_TRIES 20 // Dictates how many times should a new link mutation be attempted during species reproduction.
+
+#define NQ_BABIES_STOLEN 0
+
+#define NQ_MATE_ONLY_PROB 0.2
+#define NQ_MUTATE_ONLY_PROB 0.25 // Probability of non-mating reproduction.
+#define NQ_INTERSPECIES_MATE_RATE 0.05 // Probability that reproduction will occur within a species, as opposed to outside of it.
+
+#define NQ_MATE_MULTIPOINT_PROB 0.6 // Probability to perform a multipoint reproduction.
+#define NQ_MATE_MULTIPOINT_AVG_PROB 0.4 // Probability to perform a multipoint average reproduction.
+#define NQ_MATE_SINGLEPOINT_PROB 0.0 // Reduces the chance of multipoint average reproduction probability check succeeding.
 /*
 extern double trait_param_mut_prob;
 extern double trait_mutation_power; // Power of mutation on a signle trait param 
-extern double linktrait_mut_sig;  // Amount that mutation_num changes for a trait change inside a link
+extern double trait_mut_sig;  // Amount that mutation_num changes for a trait change inside a link
 extern double nodetrait_mut_sig; // Amount a mutation_num changes on a link connecting a node that changed its trait 
 extern double weight_mut_power;  // The power of a linkweight mutation 
 extern double recur_prob;        // Prob. that a link mutation which doesn't have to be recurrent will be made recurrent 

@@ -117,8 +117,6 @@ int Main_Central (char *cmdline, void *main_window_holder_addr, cbool do_loop)
 // because sound is off until we become active
 	S_BlockSound ();
 
-	Neural_Init(); // StephenKoren : Initialize the neural network
-
 	Host_Init ();
 
 	if (!do_loop)

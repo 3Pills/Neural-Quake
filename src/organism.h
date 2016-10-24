@@ -59,13 +59,18 @@ typedef struct organism_s
 
 } organism_t; // Container of network. 
 
-void Phenotype_Update();
-
-organism_t Organism_Init(double fit, genome_t* genome, int gen, const char* md);
+organism_t* Organism_Init(double fit, genome_t* genome, int gen, const char* md);
 
 // Copy constructor
-organism_t Organism_Init_Copy(const organism_t org);
+organism_t* Organism_Init_Copy(organism_t* o);
 
-void Organism_Delete();
+void Organism_Delete(organism_t *org);
+
+void Organism_Update_Phenotype(organism_t *org);
+
+// This is used for list sorting of Organisms by fitness..highest fitness first
+cbool Organism_Order_Orgs(organism_t *x, organism_t *y);
+
+cbool Organism_Order_Orgs_By_Adjusted_Fit(organism_t *x, organism_t *y);
 
 #endif // !__ORGANISM_H__

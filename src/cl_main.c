@@ -682,7 +682,6 @@ void CL_UpdateClient (double frametime, cbool readfromserver)
 	}
 #endif
 
-
 	// Advance time
 	// cl.time is forward only time, cl.ctime runs backwards during demo rewinding
 	cl.oldtime = cl.time;
@@ -718,6 +717,9 @@ void CL_UpdateClient (double frametime, cbool readfromserver)
 #pragma message ("If we aren't reading from server every frame, this stuff will break ...")
 	CL_RelinkEntities ();
 	CL_UpdateTEnts ();
+
+	// stephenkoren: World is updated - let the AI respond to it!
+	CL_NeuralThink (frametime);
 
 //johnfitz -- devstats
 	{
@@ -831,6 +833,9 @@ void CL_SendCmd (void)
 
 	if (cls.signon == SIGNONS)
 	{
+		//stephenkoren: allow the neural network to input button commands.
+		CL_NeuralMove();
+
 	// get basic movement from keyboard
 		CL_BaseMove (&cmd);
 
