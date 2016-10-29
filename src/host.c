@@ -693,7 +693,12 @@ void _Host_Frame (double time)
 	Host_GetConsoleCommands (); // Dedicated
 
 	if (sv.active)
-		SV_UpdateServer (sv_frametime);
+	{
+		SV_UpdateServer(sv_frametime);
+
+		// stephenkoren: World is updated - let the AI respond to it!
+		SV_NeuralThink(sv_frametime);
+	}
 
 //-------------------
 //

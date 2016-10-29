@@ -1251,6 +1251,8 @@ void R_RenderScene (void)
 
 	R_ShowBoundingBoxes (); //johnfitz
 
+	R_DrawNeuralData (); //stephenkoren -- 3D world debug drawing.
+
 #ifdef GLQUAKE_MIRRORS // Baker change
 	R_Mirror (); // In GLQuake it is after everything except polyblend
 #endif // Baker change + #ifdef GLQUAKE_MIRRORS // Baker change

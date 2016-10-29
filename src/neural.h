@@ -41,12 +41,18 @@ void Neural_Init();
 //   and these updates have been applied within the client's game.
 void CL_NeuralThink(double frametime);
 
+
+void SV_NeuralThink(double frametime);
+
 // Neural network output stage. Game is issued inputs here.
 //   Any input sent from the client to the engine should be,
 //   called here through use of the Cmd_ExecuteString command.
 //   Called in the CL_SendCmd function within cl_main.c, right
 //   before client commands are processed.
 void CL_NeuralMove();
+
+
+void R_DrawNeuralData();
 
 // Neural network rendering stage. 
 //   All debug rendering should be done here, to visually represent the

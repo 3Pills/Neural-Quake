@@ -719,7 +719,8 @@ void CL_UpdateClient (double frametime, cbool readfromserver)
 	CL_UpdateTEnts ();
 
 	// stephenkoren: World is updated - let the AI respond to it!
-	CL_NeuralThink (frametime);
+	if (cls.state == ca_connected && cls.signon == SIGNONS)
+		CL_NeuralThink (frametime);
 
 //johnfitz -- devstats
 	{

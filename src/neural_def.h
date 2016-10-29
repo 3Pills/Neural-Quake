@@ -23,6 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define NQ_POP_SIZE 500
 
+#define NQ_INPUT_ROWS 9
+#define NQ_INPUT_COLS 15
+
 #define NQ_INPUT_COUNT 135 // Input is the result of 15 by 9 rays cast outwards from the player to their immediate view.
 #define NQ_OUTPUT_COUNT 10 // WASD + Jump + Shoot + Aiming Inputs(X+, X-, Y+, Y-) 
 

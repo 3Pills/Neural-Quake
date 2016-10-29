@@ -55,9 +55,9 @@ void Draw_Line(int x1, int y1, int x2, int y2, float thickness, int c, int alpha
 	eglVertex2f(x2, y2);
 	eglEnd();
 
-	eglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
 	eglColor3f(1, 1, 1);
+	eglDisable(GL_BLEND);
+	eglEnable(GL_ALPHA_TEST);
 	eglEnable(GL_TEXTURE_2D);
 }
 
@@ -66,6 +66,8 @@ void Draw_Square(int x, int y, int w, int h, float thickness, int c, int alpha)
 	byte *pal = (byte *)vid.d_8to24table;
 
 	eglDisable(GL_TEXTURE_2D);
+	eglDisable(GL_ALPHA_TEST);
+	eglEnable(GL_BLEND);
 	eglColor4f(pal[c * 4] / 255.0, pal[c * 4 + 1] / 255.0, pal[c * 4 + 2] / 255.0, alpha);
 
 	eglLineWidth(thickness);
@@ -77,6 +79,8 @@ void Draw_Square(int x, int y, int w, int h, float thickness, int c, int alpha)
 	eglEnd();
 
 	eglColor3f(1, 1, 1);
+	eglDisable(GL_BLEND);
+	eglEnable(GL_ALPHA_TEST);
 	eglEnable(GL_TEXTURE_2D);
 }
 #else
