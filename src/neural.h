@@ -71,6 +71,10 @@ void NQ_Test();
 void NQ_Evaluate();
 void NQ_Epoch();
 
+void NQ_InitializePool();
+void NQ_InitializeRun();
+void NQ_Timeout();
+
 // ***** MATHS / UTILITY FUNCTIONS ******
 
 // This is a signmoidal activation function, which is an S-shaped squashing function

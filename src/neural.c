@@ -21,14 +21,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include <math.h>
-#include "neuron.h"
+#include "population.h"
+#include "organism.h"
+#include "genome.h"
+#include "species.h"
 #include "r_neural.h"
+
+population_t *population;
 
 void Neural_Init() 
 {
-	Con_Printf("Neural AI successfully initialized!");
+	population = Population_Init(Genome_Init_Auto(NQ_INPUT_COUNT, NQ_OUTPUT_COUNT, 0, 0), NQ_POP_SIZE);
+
+	Con_Printf("Neural population successfully initialized!");
 }
 
+void Trace_Loop()
+{
+
+}
+
+/*
 void SV_NeuralThink(double frametime) 
 {
 	/*
@@ -43,7 +56,6 @@ void SV_NeuralThink(double frametime)
 	// Move the end position forward by the falloff distance amount.
 	VectorScale(forward, 200.0f, forward);
 	VectorAdd(start, forward, end);
-	*/
 
 	// SV_Move returns a trace with all the data we need.
 	if (sv_player != NULL)
@@ -63,7 +75,6 @@ void SV_NeuralThink(double frametime)
 			}
 			//Con_Printf("Traceline impact! ent: %s, normal: %s", trace.ent->v.classname, trace.plane.normal);
 		}
-		*/
 
 		double angX = 90 - r_fovx / 2, angY = 90 - r_fovy;
 		double deltaX = r_fovx / NQ_INPUT_COLS, deltaY = r_fovy / NQ_INPUT_ROWS;
@@ -120,24 +131,126 @@ void SV_NeuralThink(double frametime)
 		}
 	}
 }
+*/
+
+const int trace_length = 1000.0f;
+
+void SV_NeuralThink(double frametime)
+{
+
+}
+
+void NQ_Timeout()
+{
+
+	// the kill command reloads the level in single player.
+	Cmd_ExecuteString("kill", src_client);
+}
+
+double timeout = 0;
+int run_num = 0;
+vector *inputs, *outputs;
 
 void CL_NeuralThink(double frametime)
 {
+	//run_num++;
+	//if (run_num > NQ_NUM_RUNS) return;
+	if (sv.max_edicts == 0) return;
+
+	//timeout += frametime;
+	if (timeout > NQ_TIMEOUT)
+		NQ_Timeout();
+
+	species_t *currSpecies;
+	genome_t *currGenome;
+
+
+	int measured = 0;
+	int total = 0;
+	//for _, species in pairs(pool.species) do
+	//	for _, genome in pairs(species.genomes) do
+	//		total = total + 1
+	//		if genome.fitness ~= 0 then
+	//			measured = measured + 1
+	//			end
+	//			end
+	//			end
+}
+/*
+void CL_NeuralThink(double frametime)
+{
+	//Rotation delta per cell.
+	double deltaX = r_fovx / NQ_INPUT_COLS, deltaY = r_fovy / NQ_INPUT_ROWS;
+
+	//Starting angle offset from centre. 
+	double angX = (-r_fovx + deltaX) / 2, angY = (-r_fovy + deltaY) / 2;
+
 	// Define directional vectors.
-	vec3_t start, end, impact, direction;
-	VectorCopy(r_refdef.vieworg, start);
+	vec3_t view_pos;
+	VectorCopy(r_refdef.vieworg, view_pos);
+
+	// Player's directional view vectors.
+	vec3_t view_f, view_r, view_u;
 
 	// Translate the player's view angles into directional vectors.
-	vec3_t forward, right, up;
-	AngleVectors(cl.viewangles, forward, right, up);
+	AngleVectors(cl.viewangles, view_f, view_r, view_u);
 
-	// Move the end position forward by the falloff distance amount.
-	VectorScale(forward, 200.0f, forward);
-	VectorAdd(start, forward, end);
+	// Intermediate operational vector values.
+	vec3_t final_pitch, final_r, final_dir, final_pos;
 
-	trace_t trace;
-	TraceLine(start, end, impact);
+	for (int i = 0; i < NQ_INPUT_ROWS; i++)
+	{
+		//Rotate final_dir to the final pitch.
+		TurnVector(final_pitch, view_f, view_u, angY + deltaY * i);
+
+		for (int j = 0; j < NQ_INPUT_COLS; j++)
+		{
+			//Calculate the new right vector using the new forward.
+			CrossProduct(final_pitch, view_u, final_r);
+
+			//Rotate forward to the final yaw and subsequently final direction.
+			TurnVector(final_dir, final_pitch, final_r, angX + deltaX * j);
+
+			// Scale the end direction forward by the falloff distance amount.
+			VectorScale(final_dir, trace_length, final_dir);
+
+			// Move the direction to world space and to the final pos.
+			VectorAdd(final_dir, view_pos, final_pos);
+
+			// If the client has entities, it will have the player.
+			if (sv.max_edicts > 0)
+			{
+				// Complete a trace, ignoring EDICT_NUM(1), which will always be the client's player entity.
+				trace_t trace = SV_Move(view_pos, vec3_origin, vec3_origin, final_pos, false, EDICT_NUM(1));
+
+				// Calculate impact point.
+				vec3_t impact;
+				VectorScale(final_dir, trace.fraction, impact);
+				VectorAdd(impact, view_pos, impact);
+
+				// Calculate whether this trace is aimed at the crosshair.
+				cbool mid = (i == (int)(NQ_INPUT_ROWS / 2) && j == (int)(NQ_INPUT_COLS / 2));
+
+				if (trace.fraction != 1.0) // fraction is 1.0 if nothing was hit.
+				{
+					if (mid)
+						Con_Printf("Trace | Entity class: %s | impact normal: [%f, %f, %f]\n", PR_GetString(trace.ent->v.classname), trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
+
+					if (trace.ent->v.solid == SOLID_BSP) // We traced a world clip.
+					{
+
+					}
+					else // It's an entity of some kind!
+					{
+
+					}
+				}
+			}
+		}
+
+	}
 }
+*/
 
 void CL_NeuralMove() 
 {
@@ -157,123 +270,122 @@ void CL_NeuralMove()
 	*/
 }
 
-const int trace_length = 500.0f;
-
 void R_DrawNeuralData()
 {
-	/*
-	// Define directional vectors.
-	vec3_t start, end, impact, direction;
-	VectorCopy(r_refdef.vieworg, start);
+	// If the client doesn't have entities, it will not have the player to trace from. Return.
+	if (sv.max_edicts == 0) return;
 
-	// Translate the player's view angles into directional vectors.
-	vec3_t forward, right, up;
-	AngleVectors(cl.viewangles, forward, right, up);
-
-	// Move the end position forward by the falloff distance amount.
-	VectorScale(forward, 200.0f, forward);
-	VectorAdd(start, forward, end);
-
-	const int size = 8;
-
-	TraceLine(start, end, impact);
-
-	if (impact[0] || impact[1] || impact[2])
-		VectorCopy(impact, end);
-
-	eglBegin(GL_LINES);
-	eglVertex3f(end[0] - size, end[1], end[2]);
-	eglVertex3f(end[0] + size, end[1], end[2]);
-	eglVertex3f(end[0], end[1] - size, end[2]);
-	eglVertex3f(end[0], end[1] + size, end[2]);
-	eglVertex3f(end[0], end[1], end[2] - size);
-	eglVertex3f(end[0], end[1], end[2] + size);
-	eglEnd();
-	*/
-
-
-	//double angX = r_fovx / 2 - 90, angY = r_fovy / 2 - 90;
-	//double deltaX = (90 - r_fovx / 2) / NQ_INPUT_COLS * 2, deltaY = (90 - r_fovy / 2) / NQ_INPUT_ROWS * 2;
-
-	//Rotation delta per cell.
+	// Rotation delta per cell.
 	double deltaX = r_fovx / NQ_INPUT_COLS, deltaY = r_fovy / NQ_INPUT_ROWS;
 
-	//Starting angle offset from centre. 
+	// Starting angle offset from centre. 
+	// These angles combine to be the top left corner of the player's view.
 	double angX = (-r_fovx + deltaX) / 2, angY = (-r_fovy + deltaY) / 2;
 
 	// Define directional vectors.
-	vec3_t start, end, impact, direction;
-	VectorCopy(r_refdef.vieworg, start);
+	vec3_t view_pos;
+	VectorCopy(r_refdef.vieworg, view_pos);
+
+	// Player's directional view vectors.
+	vec3_t view_f, view_r, view_u;
 
 	// Translate the player's view angles into directional vectors.
-	vec3_t final_dir, forward, right, up;
-	AngleVectors(cl.viewangles, forward, right, up);
+	AngleVectors(cl.viewangles, view_f, view_r, view_u);
+
+	// Intermediate operational vector values.
+	vec3_t final_pitch, final_r, final_dir, final_pos;
 
 	for (int i = 0; i < NQ_INPUT_ROWS; i++)
 	{
+		// Bool to stop rotations along pitch if centred on the player's view.
+		// This exists solely for code optimisation.
+		cbool midY = (i == (int)(NQ_INPUT_ROWS / 2));
+
+		if (midY) // Pitch is the same as the view.
+		{
+			VectorCopy(view_f, final_pitch);
+		}
+		else
+		{
+			//Rotate final_dir to the final pitch.
+			TurnVector(final_pitch, view_f, view_u, angY + deltaY * i);
+		}
+
 		for (int j = 0; j < NQ_INPUT_COLS; j++)
 		{
-			//Rotate forward to the final pitch.
-			TurnVector(final_dir, forward, right, angX + deltaX * j);
+			// Bool to stop rotations along yaw if centred on the player's view.
+			cbool midX = (j == (int)(NQ_INPUT_COLS / 2));
 
-			//Calculate the new up vector using the new forward.
-			CrossProduct(final_dir, right, up);
-
-			//Rotate final_dir to the final yaw.
-			TurnVector(final_dir, final_dir, up, angY + deltaY * i);
-
-			// Move the end position forward by the falloff distance amount.
-			VectorScale(final_dir, trace_length, final_dir);
-			VectorAdd(start, final_dir, final_dir);
-
-			const int size = 4;
-
-			trace_t trace;
-			if (sv.max_edicts > 0)
+			if (midX) // Yaw is the same as the view
 			{
-				int c = 63;
+				if (midY)
+				{
+					// The direction is the view forward.
+					VectorCopy(view_f, final_dir);
+				}
+				else
+				{
+					// No need to calculate yaw. Use pitch as the final direction.
+					VectorCopy(final_pitch, final_dir);
+				}
+			}
+			else
+			{
+				if (midY)
+				{
+					// Right hasn't changed.
+					VectorCopy(view_r, final_r);
+				}
+				else
+				{
+					// Calculate the new right vector using the new forward.
+					CrossProduct(final_pitch, view_u, final_r);
+				}
 
-				trace = SV_Move(start, vec3_origin, vec3_origin, final_dir, false, EDICT_NUM(1));
+				// Rotate forward to the final yaw and subsequently final direction.
+				TurnVector(final_dir, final_pitch, final_r, angX + deltaX * j);
+			}
+
+			// Scale the end direction forward by the falloff distance amount.
+			VectorScale(final_dir, trace_length, final_dir);
+
+			// Move the direction to world space and to the final pos.
+			VectorAdd(final_dir, view_pos, final_pos);
+
+			// The final color of the point to draw, as defined on the quake pallete.
+			int c = 15;
+
+			// Complete a trace, ignoring EDICT_NUM(1).
+			// This will always be the client's player entity.
+			trace_t trace = SV_Move(view_pos, vec3_origin, vec3_origin,
+				final_pos, false, EDICT_NUM(1));
+
+			// Calculate impact point.
+			vec3_t impact;
+			VectorScale(final_dir, trace.fraction, impact);
+			VectorAdd(impact, view_pos, impact);
+
+			if (!(midX && midY))
+			{
 				if (trace.fraction != 1.0) // fraction is 1.0 if nothing was hit.
 				{
-					//Scale the direction vector
-					VectorSubtract(final_dir, start, final_dir);
-					VectorScale(final_dir, trace.fraction, final_dir);
-					VectorAdd(start, final_dir, final_dir);
-
-
 					if (trace.ent->v.solid == SOLID_BSP) // We traced a world clip.
 					{
-					
+						c = 61;
 					}
 					else // It's an entity of some kind!
 					{
 						c = 79;
 					}
 				}
-
-
-				eglDisable(GL_TEXTURE_2D);
-				eglDisable(GL_ALPHA_TEST);
-				eglEnable(GL_BLEND);
-
-				byte *pal = (byte *)vid.d_8to24table;
-				eglColor3f(pal[c * 4] / 255.0, pal[c * 4 + 1] / 255.0, pal[c * 4 + 2] / 255.0);
-				eglBegin(GL_LINES);
-				eglVertex3f(final_dir[0] - size, final_dir[1], final_dir[2]);
-				eglVertex3f(final_dir[0] + size, final_dir[1], final_dir[2]);
-				eglVertex3f(final_dir[0], final_dir[1] - size, final_dir[2]);
-				eglVertex3f(final_dir[0], final_dir[1] + size, final_dir[2]);
-				eglVertex3f(final_dir[0], final_dir[1], final_dir[2] - size);
-				eglVertex3f(final_dir[0], final_dir[1], final_dir[2] + size);
-				eglEnd();
-
-				eglDisable(GL_BLEND);
-				eglEnable(GL_ALPHA_TEST);
-				eglEnable(GL_TEXTURE_2D);
+				else // Hit nothing
+				{
+					c = 40;
+				}
 			}
-		}
 
+			R_DrawPoint(impact, max(8 * trace.fraction, 1), c);
+		}
 	}
 }
 
