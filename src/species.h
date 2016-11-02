@@ -46,7 +46,7 @@ typedef struct species_s
 } species_t; // Collection of Genomes that hold a specific trait.
 
 species_t* Species_Init(int i);
-species_t* Species_Init_Frozen(int i, cbool n);
+species_t* Species_Init_Novel(int i, cbool n);
 
 void Species_Delete(species_t* species);
 

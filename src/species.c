@@ -35,13 +35,26 @@ species_t* Species_Init(int i)
 	species->peak_fitness = 0;
 	species->obliterate = false;
 	species->average_est = 0;
+	species->organisms = vector_init();
 
 	return species;
 }
 
-species_t* Species_Init_Frozen(int i, cbool n)
+species_t* Species_Init_Novel(int i, cbool n)
 {
 	species_t* species;
+
+	species->id = i;
+	species->age = 1;
+	species->ave_fitness = 0.0;
+	species->expected_offspring = 0;
+	species->novel = n;
+	species->age_of_last_improvement = 0;
+	species->max_fitness = 0;
+	species->peak_fitness = 0;
+	species->obliterate = false;
+	species->average_est = 0;
+	species->organisms = vector_init();
 
 	return species;
 }
@@ -534,7 +547,7 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 
 			//If we didn't find a match, create a new species
 			if (found == false) {
-				newspecies = Species_Init_Frozen(++(pop->last_species), true);
+				newspecies = Species_Init_Novel(++(pop->last_species), true);
 				vector_add(pop->species, newspecies);
 				Species_Add_Organism(newspecies, baby);  //Add the baby
 				baby->species = newspecies;  //Point baby to its species

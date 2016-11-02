@@ -43,6 +43,8 @@ neuron_t* Neuron_Init(enum nodetype_e type, int node_id)
 	neuron->frozen = false;
 	neuron->trait_id = 1;
 	neuron->override = false;
+	neuron->links_in = vector_init();
+	neuron->links_out = vector_init();
 
 	return neuron;
 }
@@ -69,6 +71,8 @@ neuron_t* Neuron_Init_Placement(enum nodetype_e type, int node_id, enum nodeplac
 	neuron->frozen = false;
 	neuron->trait_id = 1;
 	neuron->override = false;
+	neuron->links_in = vector_init();
+	neuron->links_out = vector_init();
 
 	return neuron;
 }
@@ -96,6 +100,8 @@ neuron_t* Neuron_Init_Derived(neuron_t* other, trait_t* trait)
 	neuron->frozen = false;
 	neuron->trait_id = (trait != 0) ? trait->id : 1;
 	neuron->override = false;
+	neuron->links_in = vector_init();
+	neuron->links_out = vector_init();
 
 	return neuron;
 }
@@ -123,6 +129,8 @@ neuron_t* Neuron_Init_Copy(neuron_t* other)
 	neuron->frozen				= other->frozen;
 	neuron->trait_id			= other->trait_id;
 	neuron->override			= other->override;
+	neuron->links_in			= vector_init();
+	neuron->links_out			= vector_init();
 
 	return neuron;
 }

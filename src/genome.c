@@ -43,6 +43,7 @@ genome_t* Genome_Init_Links(int id, vector* traits, vector* neurons, vector* lin
 	genome->ID = id;
 	genome->traits = traits;
 	genome->neurons = neurons;
+	genome->genes = vector_init();
 
 	//We go through the links and turn them into original genes
 	for (int i = 0; i < links->count; i++) {
@@ -60,6 +61,9 @@ genome_t* Genome_Init_Copy(genome_t* other)
 	if (genome == 0) return ((void*)1);
 
 	genome->ID = other->ID;
+	genome->traits = vector_init();
+	genome->neurons = vector_init();
+	genome->genes = vector_init();
 
 	for (int i = 0; i < other->traits->count; ++i) {
 		vector_add(other->traits, Trait_Init_Copy(other->traits->data[i]));
@@ -234,17 +238,20 @@ genome_t* Genome_Init_Copy(genome_t* other)
 	}
 }*/
 
-// This special constructor creates a Genome
-// with i inputs, o outputs, n out of nmax hidden units, and random connectivity. 
-// If r is true then recurrent connections will be included. 
+// This special constructor creates a Genome with random connectivity. 
 // The last input is a bias.
 // Linkprob is the probability of a link.
-genome_t* Genome_Init_Structure(int new_id, int i, int o, int n, int nmax, cbool r, double linkprob)
+genome_t* Genome_Init_Structure(int new_id, int input_count, int output_count, int hidden_count, int hidden_max, cbool recurrent, double linkprob)
 {
 	genome_t* genome = malloc(sizeof(genome_t));
 	if (genome == 0) return ((void*)1);
 
-	int totalnodes = i + o + nmax;
+	genome->ID = new_id;
+	genome->traits = vector_init();
+	genome->neurons = vector_init();
+	genome->genes = vector_init();
+
+	int totalnodes = input_count + output_count + hidden_max;
 	
 	int matrixdim = totalnodes*totalnodes;
 	int count;
@@ -257,17 +264,14 @@ genome_t* Genome_Init_Structure(int new_id, int i, int o, int n, int nmax, cbool
 
 	cbool *cm = malloc(sizeof(cbool) * matrixdim);  //Dimension the connection matrix
 	cbool *cmp; //Connection matrix pointer
-	maxnode = i + n;
+	maxnode = input_count + hidden_count;
 
-	first_output = totalnodes - o + 1;
+	first_output = totalnodes - output_count + 1;
 
 	//For creating the new genes
 	trait_t *newtrait;
 	neuron_t *in_node;
 	neuron_t *out_node;
-
-	//Assign the id
-	genome->ID = new_id;
 
 	//cout<<"Assigned id "<<genome_id<<endl;
 
@@ -285,9 +289,9 @@ genome_t* Genome_Init_Structure(int new_id, int i, int o, int n, int nmax, cbool
 	vector_add(genome->traits, newtrait);
 
 	//Build the input nodes
-	for (ncount = 1; ncount <= i; ncount++) 
+	for (int i = 1; i <= i; i++)
 	{
-		neuron_t *newnode = Neuron_Init_Placement(NQ_SENSOR, ncount, (ncount<i) ? NQ_INPUT : NQ_BIAS);
+		neuron_t *newnode = Neuron_Init_Placement(NQ_SENSOR, i, (i < input_count) ? NQ_INPUT : NQ_BIAS);
 		newnode->trait = newtrait;
 
 		//Add the node to the list of nodes
@@ -295,15 +299,17 @@ genome_t* Genome_Init_Structure(int new_id, int i, int o, int n, int nmax, cbool
 	}
 
 	//Build the hidden nodes
-	for (ncount = i + 1; ncount <= i + n; ncount++) {
-		neuron_t *newnode = Neuron_Init_Placement(NQ_NEURON, ncount, NQ_HIDDEN);
+	for (int i = 1; i <= i; i++)
+	{
+		neuron_t *newnode = Neuron_Init_Placement(NQ_NEURON, i, NQ_HIDDEN);
 		newnode->trait = newtrait;
 		vector_add(genome->neurons, newnode);
 	}
 
 	//Build the output nodes
-	for (ncount = first_output; ncount <= totalnodes; ncount++) {
-		neuron_t *newnode = Neuron_Init_Placement(NQ_NEURON, ncount, NQ_OUTPUT);
+	for (int i = 1; i <= i; i++)
+	{
+		neuron_t *newnode = Neuron_Init_Placement(NQ_NEURON, i, NQ_OUTPUT);
 		newnode->trait = newtrait;
 		vector_add(genome->neurons, newnode);
 	}
@@ -316,7 +322,7 @@ genome_t* Genome_Init_Structure(int new_id, int i, int o, int n, int nmax, cbool
 		for (int row = 1; row <= totalnodes; row++)
 		{
 			//Only try to create a link if it is in the matrix and not leading into a sensor.
-			if ((*cmp == true) && (col > i) &&
+			if ((*cmp == true) && (col > input_count) &&
 				((col <= maxnode) || (col >= first_output)) &&
 				((row <= maxnode) || (row >= first_output))) {
 				//If it isn't recurrent, create the connection no matter what
@@ -348,7 +354,7 @@ genome_t* Genome_Init_Structure(int new_id, int i, int o, int n, int nmax, cbool
 					//Add the gene to the genome
 					vector_add(genome->genes, Gene_Init_Trait(newtrait, new_weight, in_node, out_node, false, count, new_weight));
 				}
-				else if (r) { //Create a recurrent connection
+				else if (recurrent) { //Create a recurrent connection
 
 					//Retrieve the in_node
 					int node_iter = 0;
@@ -394,6 +400,159 @@ genome_t* Genome_Init_Auto(int num_in, int num_out, int num_hidden, int type)
 {
 	genome_t* genome = malloc(sizeof(genome_t));
 	if (genome == 0) return ((void*)1);
+
+	genome->ID = 0;
+	genome->traits = vector_init();
+	genome->neurons = vector_init();
+	genome->genes = vector_init();
+
+	//Temporary lists of nodes
+	vector *inputs = vector_init();
+	vector *outputs = vector_init();
+	vector *hidden = vector_init();
+	neuron_t *bias; //Remember the bias
+
+	//For creating the new genes
+	neuron_t *newnode;
+	gene_t *newgene;
+	trait_t *newtrait;
+
+	int count;
+	
+	//Create a dummy trait (this is for future expansion of the system)
+	newtrait = Trait_Init_Values(1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	vector_add(genome->traits, newtrait);
+
+	//Adjust hidden number
+	if (type == 0)
+		num_hidden = 0;
+	else if (type == 1)
+		num_hidden = num_in*num_out;
+
+	//Create the inputs and outputs
+
+	//Build the input nodes
+	for (int i = 1; i <= num_in; i++) {
+		if (i < num_in)
+		{
+			newnode = Neuron_Init_Placement(NQ_SENSOR, i, NQ_INPUT);
+		}
+		else
+		{
+			newnode = Neuron_Init_Placement(NQ_SENSOR, i, NQ_BIAS);
+			bias = newnode;
+		}
+
+		//newnode->nodetrait=newtrait;
+
+		//Add the node to the list of nodes
+		vector_add(genome->neurons, newnode);
+		vector_add(inputs, newnode);
+	}
+
+	//Build the hidden nodes
+	for (int i = num_in + 1; i <= num_in + num_hidden; i++) {
+		newnode = Neuron_Init_Placement(NQ_NEURON, i, NQ_HIDDEN);
+		//newnode->nodetrait=newtrait;
+		//Add the node to the list of nodes
+		vector_add(genome->neurons, newnode);
+		vector_add(hidden, newnode);
+	}
+
+	//Build the output nodes
+	for (int i = num_in + num_hidden + 1; i <= num_in + num_hidden + num_out; i++) {
+		newnode = Neuron_Init_Placement(NQ_NEURON, i, NQ_OUTPUT);
+		//newnode->nodetrait=newtrait;
+		//Add the node to the list of nodes
+		vector_add(genome->neurons, newnode);
+		vector_add(outputs, newnode);
+	}
+
+	//Create the links depending on the type
+	if (type == 0) {
+		//Just connect inputs straight to outputs
+
+		count = 1;
+
+		//Initialize inputs and outputs.
+		for (int i = 0; i < outputs->count; i++)
+		{
+			for (int j = 0; j < inputs->count; j++)
+			{
+				//Connect each input to each output
+				vector_add(genome->genes, Gene_Init_Trait(newtrait, 0, inputs->data[j], outputs->data[i], false, count, 0));
+
+				count++;
+			}
+		}
+	} //end type 0
+	//A split link from each input to each output
+	else if (type == 1) {
+		count = 1;
+
+		//Initialize links between layers.
+		for (int i = 0; i < outputs->count; i++)
+		{
+			for (int j = 0; j < inputs->count; j++)
+			{
+				for (int k = 0; k < hidden->count; k++)
+				{
+					// Connect Input to hidden.
+					vector_add(genome->genes, Gene_Init_Trait(newtrait, 0, inputs->data[j], hidden->data[k], false, count, 0));
+					count++;
+
+					// Connect hidden to output.
+					vector_add(genome->genes, Gene_Init_Trait(newtrait, 0, hidden->data[k], outputs->data[i], false, count, 0));
+					count++;
+				}
+			}
+		}
+
+	}//end type 1
+	//Fully connected 
+	else if (type == 2) {
+		count = 1; //Start gene counter at 1
+
+
+		//Connect all inputs to all hidden nodes
+		for (int i = 0; i < hidden->count; i++)
+		{
+			for (int j = 0; j < inputs->count; j++)
+			{
+				// Connect each input to each hidden.
+				vector_add(genome->genes, Gene_Init_Trait(newtrait, 0, inputs->data[j], hidden->data[i], false, count, 0));
+				count++;
+			}
+		}
+		
+		//Connect all hidden units to all outputs
+		for (int i = 0; i < outputs->count; i++)
+		{
+			for (int j = 0; j < hidden->count; j++)
+			{
+				vector_add(genome->genes, Gene_Init_Trait(newtrait, 0, hidden->data[j], outputs->data[i], false, count, 0));
+				count++;
+			}
+		}
+
+		//Connect the bias to all outputs
+		for (int i = 0; i < outputs->count; i++)
+		{
+			vector_add(genome->genes, Gene_Init_Trait(newtrait, 0, bias, outputs->data[i], false, count, 0));
+			count++;
+		}
+
+		//Recurrently connect the hidden nodes
+		for (int i = 0; i < hidden->count; i++)
+		{
+			for (int j = 0; j < hidden->count; j++)
+			{
+				vector_add(genome->genes, Gene_Init_Trait(newtrait, 0, hidden->data[j], hidden->data[i], true, count, 0));
+				count++;
+			}
+		}
+
+	}//end type 2
 
 	return genome;
 }
@@ -456,7 +615,7 @@ network_t *Genome_Genesis(genome_t *genome, int id)
 
 	//Create the links by iterating through the genes
 	for (int i = 0; i < genome->genes->count; ++i) {
-		gene_t* curgene = (gene_t*)genome->neurons->data[i];
+		gene_t* curgene = (gene_t*)genome->genes->data[i];
 		//Only create the link if the gene is enabled
 		if (curgene->enabled == true) {
 			curlink = curgene->link;

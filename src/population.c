@@ -27,6 +27,11 @@ population_t *Population_Init(genome_t *g, int size)
 	pop->winnergen = 0;
 	pop->highest_fitness = 0.0;
 	pop->highest_last_changed = 0;
+
+	pop->species = vector_init();
+	pop->organisms = vector_init();
+	pop->innovations = vector_init();
+
 	Population_Spawn(pop, g, size);
 
 	return pop;
@@ -40,6 +45,11 @@ population_t *Population_Init_No_Mutation(genome_t *g, int size, float power)
 	pop->winnergen = 0;
 	pop->highest_fitness = 0;
 	pop->highest_last_changed = 0;
+
+	pop->species = vector_init();
+	pop->organisms = vector_init();
+	pop->innovations = vector_init();
+
 	Population_Clone(pop, g, size, power);
 
 	return pop;
@@ -53,6 +63,10 @@ population_t *Population_Init_From_List(vector *genomeList, float power)
 	pop->winnergen = 0;
 	pop->highest_fitness = 0.0;
 	pop->highest_last_changed = 0;
+
+	pop->species = vector_init();
+	pop->organisms = vector_init();
+	pop->innovations = vector_init();
 
 	int count;
 	genome_t *new_genome;

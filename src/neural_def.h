@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define __neural_def__
 
 #define NQ_POP_SIZE 500
+#define NQ_NUM_RUNS 1
 
 #define NQ_INPUT_ROWS 9
 #define NQ_INPUT_COLS 15

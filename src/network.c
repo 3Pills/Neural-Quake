@@ -61,6 +61,9 @@ network_t* Network_Init_Empty(int netID)
 {
 	network_t* network = malloc(sizeof(network_t));
 
+	network->inputs = vector_init();
+	network->outputs = vector_init();
+	network->all_nodes = vector_init();
 	network->name = 0;
 	network->numnodes = -1;
 	network->numlinks = -1;
@@ -76,6 +79,9 @@ network_t* Network_Init_Empty_Adaptable(int netID, cbool adaptVal)
 {
 	network_t* network = malloc(sizeof(network_t));
 
+	network->inputs = vector_init();
+	network->outputs = vector_init();
+	network->all_nodes = vector_init();
 	network->name = 0;
 	network->numnodes = -1;
 	network->numlinks = -1;
