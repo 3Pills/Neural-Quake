@@ -83,6 +83,71 @@ void Draw_Square(int x, int y, int w, int h, float thickness, int c, int alpha)
 	eglEnable(GL_ALPHA_TEST);
 	eglEnable(GL_TEXTURE_2D);
 }
+
+void R_DrawPoint (vec3_t origin, int size, int c)
+{
+	byte *pal = (byte *)vid.d_8to24table;
+	eglColor3f(pal[c * 4] / 255.0, pal[c * 4 + 1] / 255.0, pal[c * 4 + 2] / 255.0);
+
+	eglDisable(GL_TEXTURE_2D);
+	eglDisable(GL_ALPHA_TEST);
+	eglEnable(GL_BLEND);
+
+	eglBegin (GL_LINES);
+	eglVertex3f (origin[0]-size, origin[1], origin[2]);
+	eglVertex3f (origin[0]+size, origin[1], origin[2]);
+	eglVertex3f (origin[0], origin[1]-size, origin[2]);
+	eglVertex3f (origin[0], origin[1]+size, origin[2]);
+	eglVertex3f (origin[0], origin[1], origin[2]-size);
+	eglVertex3f (origin[0], origin[1], origin[2]+size);
+	eglEnd ();
+
+	eglDisable(GL_BLEND);
+	eglEnable(GL_ALPHA_TEST);
+	eglEnable(GL_TEXTURE_2D);
+}
+
+void R_DrawWireBox(vec3_t origin, vec3_t mins, vec3_t maxs, int c)
+{
+	VectorAdd(origin, mins, mins);
+	VectorAdd(origin, maxs, maxs);
+
+	byte *pal = (byte *)vid.d_8to24table;
+	eglColor3f(pal[c * 4] / 255.0, pal[c * 4 + 1] / 255.0, pal[c * 4 + 2] / 255.0);
+
+	eglDisable(GL_TEXTURE_2D);
+	eglDisable(GL_ALPHA_TEST);
+	eglEnable(GL_BLEND);
+
+	eglBegin (GL_LINE_LOOP);
+	eglVertex3f(mins[0], mins[1], mins[2]);
+	eglVertex3f(mins[0], mins[1], maxs[2]);
+	eglVertex3f(maxs[0], mins[1], maxs[2]);
+	eglVertex3f(maxs[0], mins[1], mins[2]);
+
+	eglVertex3f(mins[0], mins[1], mins[2]);
+	eglVertex3f(mins[0], mins[1], maxs[2]);
+	eglVertex3f(mins[0], maxs[1], maxs[2]);
+	eglVertex3f(mins[0], maxs[1], mins[2]);
+
+	eglVertex3f(mins[0], maxs[1], mins[2]);
+	eglVertex3f(mins[0], maxs[1], maxs[2]);
+	eglVertex3f(maxs[0], maxs[1], maxs[2]);
+	eglVertex3f(maxs[0], maxs[1], mins[2]);
+
+	eglVertex3f(maxs[0], mins[1], mins[2]);
+	eglVertex3f(maxs[0], mins[1], maxs[2]);
+	eglVertex3f(maxs[0], maxs[1], maxs[2]);
+	eglVertex3f(maxs[0], maxs[1], mins[2]);
+
+	eglVertex3f(mins[0], maxs[1], mins[2]);
+	eglEnd ();
+
+	eglDisable(GL_BLEND);
+	eglEnable(GL_ALPHA_TEST);
+	eglEnable(GL_TEXTURE_2D);
+}
+
 #else
 
 //{
