@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 species_t* Species_Init(int i)
 {
-	species_t* species;
+	species_t* species = malloc(sizeof(species_t));
 
 	species->id = i;
 	species->age = 1;
@@ -42,7 +42,7 @@ species_t* Species_Init(int i)
 
 species_t* Species_Init_Novel(int i, cbool n)
 {
-	species_t* species;
+	species_t* species = malloc(sizeof(species_t));
 
 	species->id = i;
 	species->age = 1;
@@ -73,21 +73,6 @@ cbool Species_Rank(species_t *species)
 	if (species->organisms->count <= 1) return true;
 
 	Quicksort(0, species->organisms->count - 1, species->organisms->data, Species_Order_By_Fitness);
-
-	/* Old sorting method.
-	for (int i = 0; i < species->organisms->count; i++)
-	{
-		for (int j = i + 1; j < species->organisms->count; j++)
-		{
-			if (((organism_t*)species->organisms->data[i])->fitness >((organism_t*)species->organisms->data[j])->fitness)
-			{
-				void* temp = species->organisms->data[i];
-				species->organisms->data[i] = species->organisms->data[j];
-				species->organisms->data[j] = temp;
-			}
-		}
-	}
-	*/
 
 	return true;
 }
@@ -560,14 +545,14 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 	return true;
 }
 
-cbool Species_Order_By_Fitness(organism_t *x, organism_t *y, cbool lesser) {
-	return (x->fitness > y->fitness);
+cbool Species_Order_By_Fitness(organism_t *x, organism_t *y) {
+	return (x->fitness >= y->fitness);
 }
 
-cbool Species_Order_By_Fitness_Orig(species_t *x, species_t *y, cbool lesser) {
-	return (((organism_t*)x->organisms->data[0])->orig_fitness > ((organism_t*)y->organisms->data[0])->orig_fitness);
+cbool Species_Order_By_Fitness_Orig(species_t *x, species_t *y) {
+	return (((organism_t*)x->organisms->data[0])->orig_fitness >= ((organism_t*)y->organisms->data[0])->orig_fitness);
 }
 
-cbool Species_Order_By_Fitness_Max(species_t *x, species_t *y, cbool lesser) {
-	return (x->max_fitness > y->max_fitness);
+cbool Species_Order_By_Fitness_Max(species_t *x, species_t *y) {
+	return (x->max_fitness >= y->max_fitness);
 }

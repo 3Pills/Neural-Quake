@@ -30,6 +30,7 @@ genome_t* Genome_Init(int id, vector* traits, vector* neurons, vector* genes)
 	genome->traits = traits;
 	genome->neurons = neurons;
 	genome->genes = genes;
+	genome->fitness = -1;
 
 	return genome;
 }
@@ -44,6 +45,7 @@ genome_t* Genome_Init_Links(int id, vector* traits, vector* neurons, vector* lin
 	genome->traits = traits;
 	genome->neurons = neurons;
 	genome->genes = vector_init();
+	genome->fitness = -1;
 
 	//We go through the links and turn them into original genes
 	for (int i = 0; i < links->count; i++) {
@@ -64,6 +66,7 @@ genome_t* Genome_Init_Copy(genome_t* other)
 	genome->traits = vector_init();
 	genome->neurons = vector_init();
 	genome->genes = vector_init();
+	genome->fitness = -1;
 
 	for (int i = 0; i < other->traits->count; ++i) {
 		vector_add(other->traits, Trait_Init_Copy(other->traits->data[i]));
@@ -1878,7 +1881,7 @@ double Genome_Compatibility(genome_t *genome, genome_t *other)
 	double mut_diff_total = 0.0;
 	double num_matching = 0.0;  //Used to normalize mutation_num differences
 	
-	int loop_length = max(genome->genes->count, other->genes->count);
+	int loop_length = fmax(genome->genes->count, other->genes->count);
 	for (int i = 0; i < loop_length; i++)
 	{
 		if (i >= genome->genes->count || i >= other->genes->count) {

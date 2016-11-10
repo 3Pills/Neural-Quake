@@ -151,7 +151,6 @@ cbool Population_Clone(population_t *pop, genome_t *g, int size, float power)
 cbool Population_Spawn(population_t *pop, genome_t *g, int size)
 {
 	genome_t *new_genome;
-	organism_t *new_organism;
 
 	//Create size copies of the Genome. Start with perturbed linkweights.
 	for (int i = 1; i <= size; i++)
@@ -161,8 +160,7 @@ cbool Population_Spawn(population_t *pop, genome_t *g, int size)
 		Genome_Mutate_Link_Weights(new_genome, 1.0, 1.0, NQ_COLDGAUSSIAN);
 		Genome_Randomize_Traits(new_genome);
 
-		new_organism = Organism_Init(0.0, new_genome, 1, NULL);
-		vector_add(pop->organisms, new_organism);
+		vector_add(pop->organisms, Organism_Init(0.0, new_genome, 1, NULL));
 	}
 
 	//Keep a record of the innovation and node number we are on
@@ -177,72 +175,51 @@ cbool Population_Spawn(population_t *pop, genome_t *g, int size)
 cbool Population_Speciate(population_t *pop)
 {
 	int counter = 0;
+	for (int i = 0; i < pop->species->count; i++)
+		Species_Delete(pop->species->data[i]);
 
+	vector_free(pop->species);
+
+	// Seperate organisms into species based on their compatibility.
 	for (int i = 0; i < pop->organisms->count; i++)
 	{
 		organism_t* curorg = pop->organisms->data[i];
-		if (pop->species->count == 0)
-		{
 
-		}
-		else
+		cbool added = false;
+
+		// Search if the organism is compatible with existing species.
+		for (int j = 0; j < pop->species->count; j++)
 		{
-			organism_t *comporg = 0;
-			for (int j = 0; j < pop->species->count; j++)
-			{
-				species_t *curspecies = pop->species->data[j];
+			species_t *curspecies = pop->species->data[j];
 				
-				if (Genome_Compatibility(curorg->gnome, comporg->gnome) < NQ_COMPAT_THRESHOLD)
-				{
-					Species_Add_Organism(curspecies, curorg);
-				}
+			// Check for compatibility between the organisms.
+			if (Genome_Compatibility(curorg->gnome, Species_First(curspecies)->gnome) < NQ_COMPAT_THRESHOLD)
+			{
+				Species_Add_Organism(curspecies, curorg);
+				curorg->species = curspecies;
+				added = true;
+
+				break;
 			}
 		}
-	}
 
-	pop->last_species = counter;
+		//If we didn't find a match, create a new species.
+		if (!added)
+		{
+			//Create the first species
+			species_t *newspecies = Species_Init(pop->species->count + 1);
+			vector_add(pop->species, newspecies);
+			Species_Add_Organism(newspecies, curorg);
+			curorg->species = newspecies; //Point organism to its species
+		}
+	}
+	pop->last_species = pop->species->count;
 
 	return true;
 }
 
 cbool Population_Epoch(population_t *pop, int generation)
 {
-
-	species_t *curspecies;
-	species_t *deadspecies;  //For removing empty Species
-
-	organism_t *curorg;
-	organism_t *deadorg;
-
-	innovation_t *curinnov;
-	innovation_t *deadinnov;  //For removing old Innovs
-
-	double total = 0.0; //Used to compute average fitness over all Organisms
-
-	double overall_average;  //The average modified fitness among ALL organisms
-
-	//The fractional parts of expected offspring that can be 
-	//Used only when they accumulate above 1 for the purposes of counting
-	//Offspring
-	double skim;
-	int total_expected;  //precision checking
-	int total_organisms = pop->organisms->count;
-	int max_expected;
-	species_t *best_species;
-	int final_expected;
-
-	int pause;
-
-	//Rights to make babies can be stolen from inferior species
-	//and given to their superiors, in order to concentrate exploration on
-	//the best species
-	int NUM_STOLEN = NQ_BABIES_STOLEN; //Number of babies to steal
-	int one_fifth_stolen;
-	int one_tenth_stolen;
-
-	vector *sorted_species = vector_init();  //Species sorted by max fit org in Species
-	int stolen_babies; //Babies taken from the bad species and given to the champs
-
 	int half_pop;
 
 	int best_species_num;  //Used in debugging to see why (if) best species dies
@@ -254,12 +231,13 @@ cbool Population_Epoch(population_t *pop, int generation)
 	double compat_mod = 0.3;  //Modify compat thresh to control speciation
 
 
-	//Keeping species diverse
-	//This commented out code forces the system to aim for 
-	// num_species species at all times, enforcing diversity
-	//This tinkers with the compatibility threshold, which
-	// normally would be held constant
 	/*
+	Keeping species diverse
+	This commented out code forces the system to aim for 
+	num_species species at all times, enforcing diversity
+	This tinkers with the compatibility threshold, which
+	normally would be held constant
+
 	if (generation>1) {
 	if (num_species<num_species_target)
 	NEAT::compat_threshold-=compat_mod;
@@ -271,20 +249,20 @@ cbool Population_Epoch(population_t *pop, int generation)
 	}
 	*/
 
+	vector *sorted_species = vector_init();  //Species sorted by max fit org in Species
+
 	//Stick the Species pointers into a new Species list for sorting
 	for (int i = 0; pop->species->count; i++)
 		vector_add(sorted_species, pop->species->data[i]);
 
 	//Sort the Species by max fitness (Use an extra list to do this)
 	//These need to use ORIGINAL fitness
-	//sorted_species.qsort(order_species);
-
 	Quicksort(0, sorted_species->count - 1, sorted_species->data, Species_Order_By_Fitness_Orig);
 
 	//Flag the lowest performing species over age 20 every 30 generations 
 	//NOTE: THIS IS FOR COMPETITIVE COEVOLUTION STAGNATION DETECTION
 
-	curspecies = sorted_species->data[sorted_species->count - 1];
+	species_t *curspecies = sorted_species->data[sorted_species->count - 1];
 
 	for (int i = sorted_species->count - 1; i >= 0 && curspecies->age < 20; i)
 		curspecies = sorted_species->data[i];
@@ -296,8 +274,8 @@ cbool Population_Epoch(population_t *pop, int generation)
 	//printf("compat_thresh: %i\n", compat_threshold);
 
 	//Use Species' ages to modify the objective fitness of organisms
-	// in other words, make it more fair for younger species
-	// so they have a chance to take hold
+	//in other words, make it more fair for younger species
+	//so they have a chance to take hold
 	//Also penalize stagnant species
 	//Then adjust the fitness using the species size to "share" fitness
 	//within a species.
@@ -306,22 +284,29 @@ cbool Population_Epoch(population_t *pop, int generation)
 	for (int i = 0; i < pop->species->count; i++)
 		Species_Adjust_Fitness(pop->species->data[i]);
 
-	//Go through the organisms and add up their fitnesses to compute the
-	//overall average
+	double total = 0.0; //Used to compute average fitness over all Organisms
+	int total_organisms = pop->organisms->count;
+
+	//Go through the organisms and add up their fitnesses to compute the overall average
 	for (int i = 0; i < pop->organisms->data[i]; i++)
 		total += ((organism_t*)pop->organisms->data[i])->fitness;
 
-	overall_average = total / total_organisms;
-	printf("Generation %i: overall_average = %i\n", generation, overall_average);
+	//The average modified fitness among ALL organisms
+	double overall_average = total / total_organisms;
+	//printf("Generation %i: overall_average = %i\n", generation, overall_average);
 
 	//Now compute expected number of offspring for each individual organism
 	for (int i = 0; i < pop->organisms->data[i]; i++)
 		((organism_t*)pop->organisms->data[i])->expected_offspring = ((organism_t*)pop->organisms->data[i])->fitness / overall_average;
 
+	//The fractional parts of expected offspring that can be used only when 
+	//they accumulate above 1 for the purposes of counting Offspring
+	double skim = 0.0;
+	int total_expected = 0;
+
+
 	//Now add those offspring up within each Species to get the number of
 	//offspring per Species
-	skim = 0.0;
-	total_expected = 0;
 	for (int i = 0; i < pop->species->data[i]; i++)
 	{
 		skim = Species_Count_Offspring((species_t*)pop->species->data[i], skim);
@@ -332,8 +317,9 @@ cbool Population_Epoch(population_t *pop, int generation)
 	//If we lost precision, give an extra baby to the best Species
 	if (total_expected<total_organisms) {
 		//Find the Species expecting the most
-		max_expected = 0;
-		final_expected = 0;
+		int max_expected = 0;
+		int final_expected = 0;
+		species_t *best_species;
 
 		for (int i = 0; i < pop->species->data[i]; i++)
 		{
@@ -435,9 +421,18 @@ cbool Population_Epoch(population_t *pop, int generation)
 	else if (NQ_BABIES_STOLEN > 0) {
 		//Take away a constant number of expected offspring from the worst few species
 
-		stolen_babies = 0;
+		//Babies taken from the bad species and given to the champs
+		int stolen_babies = 0;
+
 		curspecies = 0;
 
+		//Determine the exact number that will be given to the top three
+		//They get, in order, 1/5 1/5 and 1/10 of the stolen babies
+
+		int one_fifth_stolen = NQ_BABIES_STOLEN / 5;
+		int one_tenth_stolen = NQ_BABIES_STOLEN / 10;
+
+		int NUM_STOLEN = NQ_BABIES_STOLEN; //Number of babies to steal
 
 		for (int i = sorted_species->count - 1; i >= 0 && stolen_babies < NUM_STOLEN; i--)
 		{
@@ -464,13 +459,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 		//who will take on the extra offspring for cloning or mutant cloning
 		curspecies = sorted_species->data[0];
 
-		//Determine the exact number that will be given to the top three
-		//They get , in order, 1/5 1/5 and 1/10 of the stolen babies
-		one_fifth_stolen = NQ_BABIES_STOLEN / 5;
-		one_tenth_stolen = NQ_BABIES_STOLEN / 10;
-
 		int species_index = 0;
-		curspecies = sorted_species->data[0];
 
 		while (species_index < sorted_species->count && curspecies->age_of_last_improvement < NQ_DROPOFF_AGE)
 			curspecies = sorted_species->data[++species_index];
@@ -543,10 +532,9 @@ cbool Population_Epoch(population_t *pop, int generation)
 
 	//Kill off all Organisms marked for death.  The remainder
 	//will be allowed to reproduce.
-	curorg = pop->organisms->data[0];
 	for (int i = 0; i < pop->organisms->count; i++)
 	{
-		curorg = pop->organisms->data[i];
+		organism_t *curorg = pop->organisms->data[i];
 		if (curorg->eliminate)
 		{
 			Species_Remove_Organism(curorg->species, curorg);
@@ -572,13 +560,10 @@ cbool Population_Epoch(population_t *pop, int generation)
 
 	}
 
-	//cout<<"Reproduction Complete"<<endl;
-
-
 	//Destroy and remove the old generation from the organisms and species  
 	for (int i = 0; i < pop->organisms->count; i++)
 	{
-		curorg = pop->organisms->data[i];
+		organism_t *curorg = pop->organisms->data[i];
 		Species_Remove_Organism(curorg->species, curorg);
 		Organism_Delete(curorg);
 		vector_delete(pop->organisms, curorg);

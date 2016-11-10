@@ -77,6 +77,9 @@ cbool Population_Verify(population_t *pop);
 // Clone population from a genome.
 cbool Population_Clone(population_t *pop, genome_t *g, int size, float power);
 
+// Compute the sparseness of a genome from other genomes in the population.
+double Population_Compute_Sparseness(genome_t *genome);
+
 // Turnover the population to a new generation using fitness 
 // The generation argument is the next generation
 cbool Population_Epoch(population_t *pop, int generation);

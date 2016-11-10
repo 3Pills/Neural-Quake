@@ -70,13 +70,13 @@ cbool Species_Rank(species_t *species);
 // Quicksort sorter functions. 
 
 //Sorts organisms by fitness.
-cbool Species_Order_By_Fitness(organism_t *x, organism_t *y, cbool lesser);
+cbool Species_Order_By_Fitness(organism_t *x, organism_t *y);
 
 //Sorts species by their organism's original fitness.
-cbool Species_Order_By_Fitness_Orig(species_t *x, species_t *y, cbool lesser);
+cbool Species_Order_By_Fitness_Orig(species_t *x, species_t *y);
 
 //Sorts species by their max fitness.
-cbool Species_Order_By_Fitness_Max(species_t *x, species_t *y, cbool lesser);
+cbool Species_Order_By_Fitness_Max(species_t *x, species_t *y);
 
 void Species_Adjust_Fitness(species_t *species);
 

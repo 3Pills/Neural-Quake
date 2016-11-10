@@ -25,6 +25,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "vector.h"
 #include "neural_def.h"
 #include "quakedef.h"
+#include "network.h"
+#include "population.h"
+#include "organism.h"
+#include "genome.h"
+#include "species.h"
 
 // ****** ENGINE HOOK FUNCTIONS ******
 // These functions are called from within the engine, and
@@ -51,15 +56,18 @@ void SV_NeuralThink(double frametime);
 //   before client commands are processed.
 void CL_NeuralMove();
 
-
+// Neural network 3D rendering stage. 
+//   All debug world rendering should be done here, to visually 
+//   represent the function of the neural network. 
+//   Called in the R_RenderScene function in gl_rmain.c.
 void R_DrawNeuralData();
 
-// Neural network rendering stage. 
-//   All debug rendering should be done here, to visually represent the
-//   function of the neural network. 
+// Neural network 2D rendering stage. 
+//   All debug HUD rendering should be done here, to visually 
+//   represent the function of the neural network. 
 //   Called in the SCR_UpdateScreen function in screen.c.
-//   Objects drawn in this function will be drawn over the game and 
-//   all HUD elements but will not be drawn over dev statistics,
+//   Objects drawn in this function will be drawn over the game, 
+//   all HUD elements and dev statistics, but will not be drawn over
 //   the console, the FPS counter, any download bars or any menus.
 void SCR_DrawNeuralData();
 
@@ -68,12 +76,14 @@ void SCR_DrawNeuralData();
 // be called outside of the neural network space.
 
 void NQ_Test();
-void NQ_Evaluate();
-void NQ_Epoch();
+void NQ_Evaluate(organism_t *org);
+int NQ_Epoch(population_t *pop, int generation, int *winnernum, int *winnergenes, int *winnernodes);
 
 void NQ_InitializePool();
 void NQ_InitializeRun();
+void NQ_NextOrganism();
 void NQ_Timeout();
+void NQ_GetInputs();
 
 // ***** MATHS / UTILITY FUNCTIONS ******
 
@@ -116,6 +126,17 @@ int Random_Sign();
 //		 array - Array to sort.
 //		 sort_func - A function returning a cbool which compares two pointer objects.
 void Quicksort(int first, int last, void* array, cbool(*sort_func)(void*, void*));
+
+
+// Sorting function to be passed into Quicksort function.
+//   Sorts an array of values in ascending order.
+void Quicksort_Ascending(double x, double y);
+
+// Sorting function to be passed into Quicksort function.
+//   Sorts an array of values in descending order.
+void Quicksort_Descending(double x, double y);
+
+void TraceCopy(trace_t *a, trace_t *b);
 
 //#endif
 

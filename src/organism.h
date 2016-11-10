@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "environment.h"
 #include "genome.h"
 #include "species.h"
+#include "math_vector.h"
 
 typedef struct species_s species_t;
 typedef struct network_s network_t;
@@ -47,7 +48,7 @@ typedef struct organism_s
 	cbool pop_champ; // Marks the best in population
 	cbool pop_champ_child; // Marks the duplicate child of a champion (for tracking purposes)
 	double high_fit; // DEBUG variable- high fitness of champ
-	int time_alive; // When playing in real-time allows knowing the maturity of an individual
+	double time_alive; // When playing in real-time allows knowing the maturity of an individual
 
 	// Track its origin- for debugging or analysis- we can tell how the organism was born
 	cbool mut_struct_baby;
@@ -57,6 +58,7 @@ typedef struct organism_s
 	char metadata[128];
 	cbool modified;
 
+	vec3_t final_pos; // Final position of the organism before evaluation finished
 } organism_t; // Container of network. 
 
 organism_t* Organism_Init(double fit, genome_t* genome, int gen, const char* md);

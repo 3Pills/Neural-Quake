@@ -38,10 +38,12 @@ organism_t* Organism_Init(double fit, genome_t* g, int gen, const char* md)
 	organism->super_champ_offspring = 0;
 
 	// If md is null, then we don't have metadata, otherwise we do have metadata so copy it over
-	if (md == 0) {
+	if (md == 0) 
+	{
 		strcpy(organism->metadata, "");
 	}
-	else {
+	else 
+	{
 		strncpy(organism->metadata, md, 128);
 	}
 
@@ -55,6 +57,8 @@ organism_t* Organism_Init(double fit, genome_t* g, int gen, const char* md)
 	organism->mate_baby = 0;
 
 	organism->modified = true;
+
+	memset(organism->final_pos, 0, sizeof(float) * 3);
 
 	return organism;
 }
@@ -89,6 +93,8 @@ organism_t* Organism_Init_Copy(organism_t* o)
 	organism->mate_baby = o->mate_baby;
 
 	organism->modified = false;
+
+	VectorCopy(o->final_pos, organism->final_pos);
 	
 	return organism;
 }

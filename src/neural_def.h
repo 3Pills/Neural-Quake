@@ -24,13 +24,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NQ_POP_SIZE 500
 #define NQ_NUM_RUNS 1
 
-#define NQ_INPUT_ROWS 9
-#define NQ_INPUT_COLS 15
+#define NQ_INPUT_ROWS 9 // Total rows ray cast in the player's vision cone.
+#define NQ_INPUT_COLS 15  // Total columns ray cast in the player's vision cone.
 
-#define NQ_INPUT_COUNT 135 // Input is the result of 15 by 9 rays cast outwards from the player to their immediate view.
-#define NQ_OUTPUT_COUNT 10 // WASD + Jump + Shoot + Aiming Inputs(X+, X-, Y+, Y-) 
+#define NQ_INPUT_COUNT 135 // Input is NQ_INPUT_ROWS * NQ_INPUT_COLS rays cast outwards from the player to their immediate view.
+#define NQ_OUTPUT_COUNT 10 // Output is [Forward, Backward, MoveLeft, MoveRight, LookLeft, LookRight, LookUp, LookDown, Jump, Shoot]
 
-#define NQ_TIMEOUT 20 // Time in seconds before savestate is reloaded after player idles.
+#define NQ_TIMEOUT 10 // Time in seconds before savestate is reloaded after player idles.
 
 #define NQ_RECENT_AVERAGE_FACTOR 100 // Number of previous training samples to average.
 
@@ -43,6 +43,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NQ_DISJOINT_COEFF 1.0 // Coefficient for genome compatibility testing.
 #define NQ_EXCESS_COEFF 1.0 // Coefficient for genome compatibility testing.
 #define NQ_MUTDIFF_COEFF 0.4 // Coefficient for genome compatibility testing.
+
+//p(x) = 1/k * sigma(k, i = 0, dist(x, ui))
+#define NQ_NOVELTY_COEFF 15 // k constant for novelty search
+#define NQ_NOVELTY_P_MIN 0.5
 
 #define NQ_MUTATE_RAND_TRAIT_PROB 0.1 // Chance for random trait to mutate during reproduction.
 #define NQ_MUTATE_LINK_TRAIT_PROB 0.1 // Chance for link trait to mutate during reproduction.

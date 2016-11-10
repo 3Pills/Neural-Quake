@@ -92,6 +92,14 @@ void *vector_delete(vector *v, int index)
 	return v->data[index];
 }
 
+void vector_clear(vector *v)
+{
+	for (int i = 0; i < v->count; i++)
+		v->data[i] = 0;
+
+	v->count = 0;
+}
+
 void vector_free(vector *v)
 {
 	free(v->data);
