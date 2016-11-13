@@ -19,9 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #ifndef __NEURON_H__
 #define __NEURON_H__
-#include "neural_def.h"
 #include "environment.h"
 #include "gene.h"
+#include "vector.h"
 
 // The type of node.
 enum nodetype_e {
@@ -52,8 +52,8 @@ typedef struct neuron_s
 	double last_activation; // Holds the previous step's activation for recurrency
 	double last_activation2; // Holds the activation BEFORE the prevous step's
 
-	trait_t* trait; // Points to a trait of parameters
-	int trait_id; // identify the trait derived by this node
+	//trait_t* trait; // Points to a trait of parameters
+	//int trait_id; // identify the trait derived by this node
 
 	neuron_t* dupe; // Used for Genome duplication
 	neuron_t* analogue; // Used for Gene decoding
@@ -75,7 +75,7 @@ typedef struct neuron_s
 	double activation; // The total activation entering the NNode 
 	cbool active_flag; // To make sure outputs are active
 
-	double params[NQ_TRAIT_NUM_PARAMS];
+	//double params[NQ_TRAIT_NUM_PARAMS];
 
 	vector* rowLevels; // Contains: double. Depth from output where this node appears.
 
@@ -92,7 +92,10 @@ neuron_t* Neuron_Init(enum nodetype_e type, int node_id);
 neuron_t* Neuron_Init_Placement(enum nodetype_e type, int node_id, enum nodeplace_e placement);
 
 // Construct a node using another as a base, for genome purposes.
-neuron_t* Neuron_Init_Derived(neuron_t* other, trait_t* trait);
+neuron_t* Neuron_Init_Derived(neuron_t* other);
+
+// Construct a node using another as a base, for genome purposes.
+//neuron_t* Neuron_Init_Derived(neuron_t* other, trait_t* trait);
 
 // Copy constructor.
 neuron_t* Neuron_Init_Copy(neuron_t* other);
@@ -122,7 +125,7 @@ void Neuron_Flushback(neuron_t* node);
 void Neuron_Flushback_Check(neuron_t* node, vector* seenlist);
 
 // Have Neuron gain its properties from the trait
-void Neuron_Derive_Trait(neuron_t* node, trait_t *curtrait);
+//void Neuron_Derive_Trait(neuron_t* node, trait_t *curtrait);
 
 // Force an output value on the node
 void Neuron_Override_Output(neuron_t* node, double new_output);

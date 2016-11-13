@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <stdlib.h>
 #include "vector.h"
-#include "neural_def.h"
 #include "quakedef.h"
 #include "network.h"
 #include "population.h"
@@ -40,14 +39,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //   should run as soon as the game boots should be run within this function.
 void Neural_Init();
 
+// Neural network is reloaded.
+//   Called whenever the client has finished transitioning to a new level, 
+//   or reloaded the current one. Anything that should reinitialize at
+//   the start of a new genome run should do it here.
+void Neural_Reload();
+
 // Neural network input gathering and layer processing stage.
 //   Called in the CL_UpdateClient function within cl_main.c
 //   after the client has received all updates from the server
 //   and these updates have been applied within the client's game.
 void CL_NeuralThink(double frametime);
-
-
-void SV_NeuralThink(double frametime);
 
 // Neural network output stage. Game is issued inputs here.
 //   Any input sent from the client to the engine should be,
@@ -130,11 +132,11 @@ void Quicksort(int first, int last, void* array, cbool(*sort_func)(void*, void*)
 
 // Sorting function to be passed into Quicksort function.
 //   Sorts an array of values in ascending order.
-void Quicksort_Ascending(double x, double y);
+cbool Quicksort_Ascending(double x, double y);
 
 // Sorting function to be passed into Quicksort function.
 //   Sorts an array of values in descending order.
-void Quicksort_Descending(double x, double y);
+cbool Quicksort_Descending(double x, double y);
 
 void TraceCopy(trace_t *a, trace_t *b);
 

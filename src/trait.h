@@ -19,10 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #ifndef __TRAIT_H__
 #define __TRAIT_H__
-
-#include "neural_def.h"
-#include <stdarg.h>
-#include <stdlib.h>
+/*
 
 typedef struct trait_s
 {
@@ -47,5 +44,5 @@ trait_t *Trait_Init_Merge(trait_t* t1, trait_t* t2);
 void Trait_Delete(trait_t* trait);
 
 void Trait_Mutate(trait_t* trait); // Perturb trait parameters slightly.
-
+*/
 #endif // !__TRAIT_H__

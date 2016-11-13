@@ -18,8 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "neuron.h"
-
-
+#include "neural_def.h"
 
 neuron_t* Neuron_Init(enum nodetype_e type, int node_id)
 {
@@ -36,12 +35,12 @@ neuron_t* Neuron_Init(enum nodetype_e type, int node_id)
 	neuron->activation_count = 0; //Inactive upon creation
 	neuron->node_id = node_id;
 	neuron->fType = NQ_SIGMOID;
-	neuron->trait = 0;
 	neuron->node_label = NQ_HIDDEN;
 	neuron->dupe = 0;
 	neuron->analogue = 0;
 	neuron->frozen = false;
-	neuron->trait_id = 1;
+	//neuron->trait = 0;
+	//neuron->trait_id = 1;
 	neuron->override = false;
 	neuron->links_in = vector_init();
 	neuron->links_out = vector_init();
@@ -64,12 +63,12 @@ neuron_t* Neuron_Init_Placement(enum nodetype_e type, int node_id, enum nodeplac
 	neuron->activation_count = 0; //Inactive upon creation
 	neuron->node_id = node_id;
 	neuron->fType = NQ_SIGMOID;
-	neuron->trait = 0;
 	neuron->node_label = placement;
 	neuron->dupe = 0;
 	neuron->analogue = 0;
 	neuron->frozen = false;
-	neuron->trait_id = 1;
+	//neuron->trait = 0;
+	//neuron->trait_id = 1;
 	neuron->override = false;
 	neuron->links_in = vector_init();
 	neuron->links_out = vector_init();
@@ -78,7 +77,7 @@ neuron_t* Neuron_Init_Placement(enum nodetype_e type, int node_id, enum nodeplac
 }
 
 // Construct a node using another as a base, for genome purposes.
-neuron_t* Neuron_Init_Derived(neuron_t* other, trait_t* trait)
+neuron_t* Neuron_Init_Derived(neuron_t* other)
 {
 	neuron_t* neuron = malloc(sizeof(neuron_t));
 	if (neuron == 0) return ((void*)1);
@@ -93,12 +92,12 @@ neuron_t* Neuron_Init_Derived(neuron_t* other, trait_t* trait)
 	neuron->activation_count = 0; //Inactive upon creation
 	neuron->node_id = other->node_id;
 	neuron->fType = NQ_SIGMOID;
-	neuron->trait = trait;
 	neuron->node_label = other->node_label;
 	neuron->dupe = 0;
 	neuron->analogue = 0;
 	neuron->frozen = false;
-	neuron->trait_id = (trait != 0) ? trait->id : 1;
+	//neuron->trait = trait;
+	//neuron->trait_id = (trait != 0) ? trait->id : 1;
 	neuron->override = false;
 	neuron->links_in = vector_init();
 	neuron->links_out = vector_init();
@@ -122,12 +121,12 @@ neuron_t* Neuron_Init_Copy(neuron_t* other)
 	neuron->activation_count	= other->activation_count; //Inactive upon creation
 	neuron->node_id				= other->node_id;
 	neuron->fType				= other->fType;
-	neuron->trait				= other->trait;
 	neuron->node_label			= other->node_label;
 	neuron->dupe				= other->dupe;
 	neuron->analogue			= other->analogue;
 	neuron->frozen				= other->frozen;
-	neuron->trait_id			= other->trait_id;
+	//neuron->trait				= other->trait;
+	//neuron->trait_id			= other->trait_id;
 	neuron->override			= other->override;
 	neuron->links_in			= vector_init();
 	neuron->links_out			= vector_init();
@@ -147,7 +146,7 @@ double Neuron_Get_Active_Out_TD(neuron_t* node)
 
 void Neuron_Delete(neuron_t* node)
 {
-	for (int i = 0; i < node->links_in; i++)
+	for (int i = 0; i < node->links_in->count; i++)
 	{
 		Link_Delete(node->links_in);
 	}
@@ -260,6 +259,7 @@ void Neuron_Flushback_Check(neuron_t* node, vector* seenlist)
 	}
 }
 
+/*
 void Neuron_Derive_Trait(neuron_t* node, trait_t *curtrait)
 {
 	if (curtrait != 0) {
@@ -275,6 +275,7 @@ void Neuron_Derive_Trait(neuron_t* node, trait_t *curtrait)
 		node->trait_id = curtrait->id;
 	else node->trait_id = 1;
 }
+*/
 
 void Neuron_Override_Output(neuron_t* node, double new_output)
 {

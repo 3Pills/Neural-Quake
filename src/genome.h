@@ -22,9 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifndef __GENOME_H__
 #define __GENOME_H__
-#include "neural_def.h"
 #include "gene.h"
 #include "innovation.h"
+#include "vector.h"
 
 //Describes the type of mutator to be appplied during link mutations.
 enum mutator_e {
@@ -37,7 +37,7 @@ typedef struct genome_s
 	int ID;
 	int fitness; // Determined fitness of the Genome.
 
-	vector* traits; // Contains: trait_t*. Array of Traits within the genome.
+	//vector* traits; // Contains: trait_t*. Array of Traits within the genome.
 	vector* neurons; // Contains: neuron_t*. Array of Neurons within the genome.
 	vector* genes; // Contains: gene_t*. Array of Genes within the genome.
 
@@ -46,10 +46,10 @@ typedef struct genome_s
 } genome_t; // Network of neurons connected by genes.
 
 //Constructor which takes full genome specs and puts them into the new one
-genome_t* Genome_Init(int id, vector* traits, vector* nodes, vector* genes);
+genome_t* Genome_Init(int id, vector* nodes, vector* genes);
 
 //Constructor which takes in links (not genes) and creates a Genome
-genome_t* Genome_Init_Links(int id, vector* traits, vector* nodes, vector* links);
+genome_t* Genome_Init_Links(int id, vector* nodes, vector* links);
 
 // Copy constructor
 genome_t* Genome_Init_Copy(genome_t* other);
@@ -172,13 +172,13 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 double Genome_Compatibility(genome_t *genome, genome_t *other);
 
 // Compare the difference of params within each trait and return that difference.
-double Genome_Trait_Compare(genome_t *genome, trait_t *t1, trait_t *t2);
+// double Genome_Trait_Compare(genome_t *genome, trait_t *t1, trait_t *t2);
 
 // Return number of non-disabled genes 
 int Genome_Extrons(genome_t *genome);
 
 // Randomize the trait pointers of all the node and connection genes 
-void Genome_Randomize_Traits(genome_t *genome);
+// void Genome_Randomize_Traits(genome_t *genome);
 
 
 //Inserts a NNode into a given ordered list of NNodes in order

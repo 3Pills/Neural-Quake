@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "neuron.h"
 #include "link.h"
 #include "stdlib.h"
+#include "neural_def.h"
 
 gene_t* Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum) 
 {
@@ -36,11 +37,12 @@ gene_t* Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurri
 }
 
 // Construct a gene with a trait.
-gene_t* Gene_Init_Trait(trait_t* trait, double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum) 
+//gene_t* Gene_Init_Trait(trait_t* trait, double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum)
+gene_t* Gene_Init_Trait(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum)
 {
 	gene_t* gene = malloc(sizeof(gene_t));
 
-	gene->link = Link_Init_Trait(trait, w, in_node, out_node, recurring);
+	gene->link = Link_Init_Trait(w, in_node, out_node, recurring);
 	gene->innovation_num = innov;
 	gene->mutation_num = mnum;
 	gene->enabled = true;
@@ -49,11 +51,11 @@ gene_t* Gene_Init_Trait(trait_t* trait, double w, neuron_t* in_node, neuron_t* o
 	return gene;
 }
 
-gene_t* Gene_Init_Dupe(gene_t *g, trait_t *tp, neuron_t *inode, neuron_t *onode)
+gene_t* Gene_Init_Dupe(gene_t *g, neuron_t *inode, neuron_t *onode)
 {
 	gene_t* gene = malloc(sizeof(gene_t));
 
-	gene->link = Link_Init_Trait(tp, (g->link)->weight, inode, onode, (g->link)->recurrent);
+	gene->link = Link_Init_Trait(g->link->weight, inode, onode, g->link->recurrent);
 	gene->innovation_num = g->innovation_num;
 	gene->mutation_num = g->mutation_num;
 	gene->enabled = g->enabled;

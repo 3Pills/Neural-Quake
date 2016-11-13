@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define __LINK_H__
 
 #include "environment.h"
-#include "neural_def.h"
 #include "trait.h"
 
 typedef struct neuron_s neuron_t;
@@ -36,21 +35,22 @@ typedef struct nlink_s
 	cbool recurrent;
 	cbool time_delay;
 
-	trait_t *trait;
-	int trait_id; // identify the trait derived by this link.
+	//trait_t *trait;
+	//int trait_id; // identify the trait derived by this link.
 
 	double added_weight;
-	double params[NQ_TRAIT_NUM_PARAMS];
+	//double params[NQ_TRAIT_NUM_PARAMS];
 
 } nlink_t; // Link between two neural nodes.
 
 nlink_t* Link_Init(double w, neuron_t* inode, neuron_t* onode, cbool recurring);
-nlink_t* Link_Init_Trait(trait_t* trait, double w, neuron_t* inode, neuron_t* onode, cbool recurring);
+nlink_t* Link_Init_Trait(double w, neuron_t* inode, neuron_t* onode, cbool recurring);
+//nlink_t* Link_Init_Trait(trait_t* trait, double w, neuron_t* inode, neuron_t* onode, cbool recurring);
 nlink_t* Link_Init_Unknown(double w);
 nlink_t* Link_Init_Copy(nlink_t* link);
 
 void Link_Delete(nlink_t* link);
 
-void Link_Derive_Trait(nlink_t* link, trait_t* curTrait);
+//void Link_Derive_Trait(nlink_t* link, trait_t* curTrait);
 
 #endif // !__LINK_H__

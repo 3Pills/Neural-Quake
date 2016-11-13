@@ -20,7 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __POPULATION_H__
 #define __POPULATION_H__
 
-#include "neural_def.h"
 #include "innovation.h"
 #include "genome.h"
 #include "species.h"

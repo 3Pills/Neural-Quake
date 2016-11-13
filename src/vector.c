@@ -6,6 +6,7 @@ Licensed under MIT license
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "vector.h"
 
@@ -34,7 +35,12 @@ void vector_add(vector *v, void *e)
 
 	if (v->size == v->count) {
 		v->size *= 2;
-		v->data = realloc(v->data, sizeof(void*) * v->size);
+
+		void *newData = realloc(v->data, sizeof(void*) * v->size);
+		if (newData != NULL)
+			v->data = newData;
+		else
+			assert("Error in data pointer!");
 	}
 
 	v->data[v->count] = e;
@@ -43,7 +49,8 @@ void vector_add(vector *v, void *e)
 
 void vector_insert(vector *v, int index, void *e)
 {
-	if (v->size <= v->count + 1) 
+	v->count++;
+	if (v->size <= v->count) 
 	{
 		v->size *= 2;
 		v->data = realloc(v->data, sizeof(void*) * v->size);
@@ -55,7 +62,6 @@ void vector_insert(vector *v, int index, void *e)
 	}
 
 	v->data[index] = e;
-	v->count++;
 }
 
 void vector_set(vector *v, int index, void *e)
@@ -82,11 +88,10 @@ void *vector_delete(vector *v, int index)
 		return 0;
 	}
 
-	for (int i = index, j = index; i < v->count; i++) {
-		v->data[j] = v->data[i];
-		j++;
-	}
+	for (int i = index; i < v->count-1; i++)
+		v->data[i] = v->data[i+1];
 
+	v->data[v->count] = 0;
 	v->count--;
 
 	return v->data[index];
@@ -103,6 +108,10 @@ void vector_clear(vector *v)
 void vector_free(vector *v)
 {
 	free(v->data);
+
+	v->data = NULL;
+	v->size = 0;
+	v->count = 0;
 }
 
 void vector_free_all(vector *v)

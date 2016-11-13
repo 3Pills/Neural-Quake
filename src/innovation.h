@@ -51,9 +51,15 @@ typedef struct innovation_s
 innovation_t* Innovation_Init(int nin, int nout, double num1, double num2, int newid, double oldinnov);
 
 //Constructor for new link case
+innovation_t* Innovation_Init_Link(int nin, int nout, double num1, double w);
+
+//Constructor for a recur link
+innovation_t* Innovation_Init_Link_Recur(int nin, int nout, double num1, double w, cbool recur);
+/*
+//Constructor for new link case
 innovation_t* Innovation_Init_Link(int nin, int nout, double num1, double w, int t);
 
 //Constructor for a recur link
 innovation_t* Innovation_Init_Link_Recur(int nin, int nout, double num1, double w, int t, cbool recur);
-
+*/
 #endif //! __INNOVATION_H__

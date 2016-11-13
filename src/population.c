@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "population.h"
+#include "neural_def.h"
 
 population_t *Population_Init(genome_t *g, int size)
 {
@@ -68,7 +69,6 @@ population_t *Population_Init_From_List(vector *genomeList, float power)
 	pop->organisms = vector_init();
 	pop->innovations = vector_init();
 
-	int count;
 	genome_t *new_genome;
 	organism_t *new_organism;
 
@@ -79,7 +79,7 @@ population_t *Population_Init_From_List(vector *genomeList, float power)
 		new_genome = genomeList->data[i];
 		if (power > 0)
 			Genome_Mutate_Link_Weights(new_genome, power, 1.0, NQ_GAUSSIAN);
-		Genome_Randomize_Traits(new_genome);
+		//Genome_Randomize_Traits(new_genome);
 		new_organism = Organism_Init(0.0, new_genome, 1, NULL);
 		vector_add(pop->organisms, new_organism);
 	}
@@ -133,7 +133,7 @@ cbool Population_Clone(population_t *pop, genome_t *g, int size, float power)
 		new_genome = Genome_Duplicate(g, i);
 
 		if (power > 0) Genome_Mutate_Link_Weights(new_genome, power, 1.0, NQ_GAUSSIAN);
-		Genome_Randomize_Traits(new_genome);
+		//Genome_Randomize_Traits(new_genome);
 
 		new_organism = Organism_Init(0.0, new_genome, 1, NULL);
 		vector_add(pop->organisms, new_organism);
@@ -158,7 +158,7 @@ cbool Population_Spawn(population_t *pop, genome_t *g, int size)
 		new_genome = Genome_Duplicate(g, i);
 
 		Genome_Mutate_Link_Weights(new_genome, 1.0, 1.0, NQ_COLDGAUSSIAN);
-		Genome_Randomize_Traits(new_genome);
+		//Genome_Randomize_Traits(new_genome);
 
 		vector_add(pop->organisms, Organism_Init(0.0, new_genome, 1, NULL));
 	}
@@ -223,7 +223,6 @@ cbool Population_Epoch(population_t *pop, int generation)
 	int half_pop;
 
 	int best_species_num;  //Used in debugging to see why (if) best species dies
-	cbool best_ok;
 
 	//We can try to keep the number of species constant at this number
 	int num_species_target = 4;
@@ -252,7 +251,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 	vector *sorted_species = vector_init();  //Species sorted by max fit org in Species
 
 	//Stick the Species pointers into a new Species list for sorting
-	for (int i = 0; pop->species->count; i++)
+	for (int i = 0; i < pop->species->count; i++)
 		vector_add(sorted_species, pop->species->data[i]);
 
 	//Sort the Species by max fitness (Use an extra list to do this)
@@ -261,10 +260,9 @@ cbool Population_Epoch(population_t *pop, int generation)
 
 	//Flag the lowest performing species over age 20 every 30 generations 
 	//NOTE: THIS IS FOR COMPETITIVE COEVOLUTION STAGNATION DETECTION
-
 	species_t *curspecies = sorted_species->data[sorted_species->count - 1];
 
-	for (int i = sorted_species->count - 1; i >= 0 && curspecies->age < 20; i)
+	for (int i = sorted_species->count - 1; i >= 0 && curspecies->age < 20; i--)
 		curspecies = sorted_species->data[i];
 
 	if ((generation % 30) == 0)
@@ -288,7 +286,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 	int total_organisms = pop->organisms->count;
 
 	//Go through the organisms and add up their fitnesses to compute the overall average
-	for (int i = 0; i < pop->organisms->data[i]; i++)
+	for (int i = 0; i < pop->organisms->count; i++)
 		total += ((organism_t*)pop->organisms->data[i])->fitness;
 
 	//The average modified fitness among ALL organisms
@@ -296,7 +294,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 	//printf("Generation %i: overall_average = %i\n", generation, overall_average);
 
 	//Now compute expected number of offspring for each individual organism
-	for (int i = 0; i < pop->organisms->data[i]; i++)
+	for (int i = 0; i < pop->organisms->count; i++)
 		((organism_t*)pop->organisms->data[i])->expected_offspring = ((organism_t*)pop->organisms->data[i])->fitness / overall_average;
 
 	//The fractional parts of expected offspring that can be used only when 
@@ -307,7 +305,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 
 	//Now add those offspring up within each Species to get the number of
 	//offspring per Species
-	for (int i = 0; i < pop->species->data[i]; i++)
+	for (int i = 0; i < pop->species->count; i++)
 	{
 		skim = Species_Count_Offspring((species_t*)pop->species->data[i], skim);
 		total_expected += ((species_t*)pop->species->data[i])->expected_offspring;
@@ -321,7 +319,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 		int final_expected = 0;
 		species_t *best_species;
 
-		for (int i = 0; i < pop->species->data[i]; i++)
+		for (int i = 0; i < pop->species->count; i++)
 		{
 			curspecies = pop->species->data[i];
 			if (curspecies->expected_offspring >= max_expected)
@@ -331,7 +329,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 			}
 			final_expected += curspecies->expected_offspring;
 		}
-		//Give the extra offspring to the best species
+		//Give the extra offspring to the best species 
 		++(best_species->expected_offspring);
 		final_expected++;
 
@@ -343,7 +341,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 		//an average we can use to assign offspring.
 		if (final_expected < total_organisms)
 		{
-			for (int i = 0; i < pop->species->data[i]; i++)
+			for (int i = 0; i < pop->species->count; i++)
 				((species_t*)pop->species->data[i])->expected_offspring = 0;
 
 			best_species->expected_offspring = total_organisms;
@@ -352,7 +350,6 @@ cbool Population_Epoch(population_t *pop, int generation)
 
 	//Sort the Species by max fitness (Use an extra list to do this)
 	//These need to use ORIGINAL fitness
-	//sorted_species.qsort(order_species);
 	Quicksort(0, sorted_species->count - 1, sorted_species->data, Species_Order_By_Fitness_Orig);
 
 	best_species_num = ((species_t*)sorted_species->data[0])->id;
@@ -438,7 +435,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 		{
 			curspecies = sorted_species->data[i];
 
-			if ((curspecies->age>5) && (curspecies->expected_offspring > 2)) 
+			if (curspecies->age > 5 && curspecies->expected_offspring > 2) 
 			{
 				//This species has enough to finish off the stolen pool
 				if ((curspecies->expected_offspring - 1) >= (NUM_STOLEN - stolen_babies)) 
@@ -457,55 +454,37 @@ cbool Population_Epoch(population_t *pop, int generation)
 
 		//Mark the best champions of the top species to be the super champs
 		//who will take on the extra offspring for cloning or mutant cloning
-		curspecies = sorted_species->data[0];
-
 		int species_index = 0;
+		curspecies = sorted_species->data[species_index];
 
-		while (species_index < sorted_species->count && curspecies->age_of_last_improvement < NQ_DROPOFF_AGE)
-			curspecies = sorted_species->data[++species_index];
+		int curr_stolen = one_fifth_stolen;
 
-		//Concentrate A LOT on the number one species
-		if (stolen_babies >= one_fifth_stolen && species_index < sorted_species->count)
+		for (int i = 0; i < 3; i++)
 		{
-			((organism_t*)(curspecies->organisms->data[0]))->super_champ_offspring = one_fifth_stolen;
-			curspecies->expected_offspring += one_fifth_stolen;
-			stolen_babies -= one_fifth_stolen;
-			curspecies = sorted_species->data[++species_index];
+			if (i == 2) curr_stolen = one_tenth_stolen;
+
+			while (species_index < sorted_species->count && curspecies->age_of_last_improvement > NQ_DROPOFF_AGE)
+				curspecies = sorted_species->data[++species_index];
+
+			if (species_index < sorted_species->count && stolen_babies >= curr_stolen)
+			{
+				((organism_t*)(curspecies->organisms->data[0]))->super_champ_offspring = curr_stolen;
+				curspecies->expected_offspring += curr_stolen;
+				stolen_babies -= curr_stolen;
+				curspecies = sorted_species->data[++species_index];
+			}
 		}
 
-		while (species_index < sorted_species->count && curspecies->age_of_last_improvement < NQ_DROPOFF_AGE)
+		while (species_index < sorted_species->count && curspecies->age_of_last_improvement > NQ_DROPOFF_AGE)
 			curspecies = sorted_species->data[++species_index];
 
-		if (curspecies != 0 && stolen_babies >= one_fifth_stolen) 
+		while (species_index < sorted_species->count && stolen_babies > 0)
 		{
-			((organism_t*)(curspecies->organisms->data[0]))->super_champ_offspring = one_fifth_stolen;
-			curspecies->expected_offspring += one_fifth_stolen;
-			stolen_babies -= one_fifth_stolen;
-			curspecies = sorted_species->data[++species_index];
-		}
-
-		while (species_index < sorted_species->count && curspecies->age_of_last_improvement < NQ_DROPOFF_AGE)
-			curspecies = sorted_species->data[++species_index];
-
-		if (curspecies != 0 && stolen_babies >= one_tenth_stolen)
-		{
-			((organism_t*)(curspecies->organisms->data[0]))->super_champ_offspring = one_tenth_stolen;
-			curspecies->expected_offspring += one_tenth_stolen;
-			stolen_babies -= one_tenth_stolen;
-			curspecies = sorted_species->data[++species_index];
-		}
-
-		while (species_index < sorted_species->count && curspecies->age_of_last_improvement < NQ_DROPOFF_AGE)
-			curspecies = sorted_species->data[++species_index];
-
-		while (stolen_babies > 0 && species_index < sorted_species->count)
-		{
-
 			//Randomize a little which species get boosted by a super champ
 			if (Random_Float() > 0.1)
 			{
 				// Don't take into account more than 3 stolen babies.
-				int stolen_babies_clamped = min(stolen_babies, 3);
+				int stolen_babies_clamped = fmin(stolen_babies, 3);
 
 				((organism_t*)(curspecies->organisms->data[0]))->super_champ_offspring = stolen_babies_clamped;
 				curspecies->expected_offspring += stolen_babies_clamped;
@@ -514,7 +493,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 
 			curspecies = sorted_species->data[++species_index];
 
-			while (species_index < sorted_species->count && curspecies->age_of_last_improvement < NQ_DROPOFF_AGE)
+			while (species_index < sorted_species->count && curspecies->age_of_last_improvement > NQ_DROPOFF_AGE)
 				curspecies = sorted_species->data[++species_index];
 
 		}
@@ -529,7 +508,6 @@ cbool Population_Epoch(population_t *pop, int generation)
 		}
 	}
 
-
 	//Kill off all Organisms marked for death.  The remainder
 	//will be allowed to reproduce.
 	for (int i = 0; i < pop->organisms->count; i++)
@@ -538,11 +516,12 @@ cbool Population_Epoch(population_t *pop, int generation)
 		if (curorg->eliminate)
 		{
 			Species_Remove_Organism(curorg->species, curorg);
+			vector_delete(pop->organisms, i);
 			Organism_Delete(curorg);
-			vector_delete(pop->organisms, curorg);
 			i--;
 		}
 	}
+
 
 	// Reproduce Species
 	curspecies = pop->species->data[0];
@@ -553,7 +532,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 		Species_Reproduce(curspecies, generation, pop, sorted_species);
 
 		//Set the current species to the id of the last species checked
-		//(the iterator must be reset because there were possibly vector insertions during reproduce)
+		//The iterator must be reset because there were possibly vector insertions during reproduce
 		for (int j = 0; j < pop->species->count; j++)
 			if (((species_t*)pop->species->data[j])->id == last_id)
 				i = j;
@@ -561,13 +540,12 @@ cbool Population_Epoch(population_t *pop, int generation)
 	}
 
 	//Destroy and remove the old generation from the organisms and species  
-	for (int i = 0; i < pop->organisms->count; i++)
+	while (pop->organisms->count > 0)
 	{
-		organism_t *curorg = pop->organisms->data[i];
+		organism_t *curorg = pop->organisms->data[0];
 		Species_Remove_Organism(curorg->species, curorg);
+		vector_delete(pop->organisms, 0);
 		Organism_Delete(curorg);
-		vector_delete(pop->organisms, curorg);
-		i--;
 	}
 
 	//Remove all empty Species and age ones that survive
@@ -578,8 +556,8 @@ cbool Population_Epoch(population_t *pop, int generation)
 		curspecies = pop->species->data[i];
 		if (curspecies->organisms->size == 0)
 		{
+			vector_delete(pop->species, i);
 			Species_Delete(curspecies);
-			vector_delete(pop->species, curspecies);
 			i--;
 		}
 		//Age surviving Species and rebuild master Organism list: NUMBER THEM as they are added to the list
@@ -603,8 +581,8 @@ cbool Population_Epoch(population_t *pop, int generation)
 	//Remove the innovations of the current generation
 	for (int i = 0; i < pop->innovations->count; i++)
 	{
+		vector_delete(pop->innovations, i);
 		free(pop->innovations->data[i]);
-		vector_delete(pop->innovations, pop->innovations->data[i]);
 		i--;
 	}
 

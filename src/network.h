@@ -20,8 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __NETWORK_H__
 #define __NETWORK_H__
 
-#include "neural_def.h"
 #include "neuron.h"
+#include "vector.h"
 
 typedef struct genome_s genome_t;
 

@@ -24,9 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define __GENE_H__
 
 #include <stdio.h>
-#include "neural_def.h"
 #include "environment.h"
-#include "trait.h"
+#include "vector.h"
 #include "link.h"
 #include "network.h"
 
@@ -46,10 +45,18 @@ typedef struct gene_s
 gene_t* Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum);
 
 // Construct a gene with a trait.
+gene_t* Gene_Init_Trait(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum);
+
+//Construct a gene off of another gene as a duplicate
+gene_t* Gene_Init_Dupe(gene_t *g, neuron_t *inode, neuron_t *onode);
+
+/*
+// Construct a gene with a trait.
 gene_t* Gene_Init_Trait(trait_t* trait, double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum);
 
 //Construct a gene off of another gene as a duplicate
 gene_t* Gene_Init_Dupe(gene_t *g, trait_t *tp, neuron_t *inode, neuron_t *onode);
+*/
 
 // Duplicate a gene from another existing gene.
 gene_t* Gene_Init_Copy(gene_t* g);

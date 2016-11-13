@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "r_neural.h"
+#include "neural_def.h"
 
 population_t *population;
 vector *inputs; // Contains: trace_t*. A vector of input data gathered during the frame prior to 
@@ -35,9 +36,13 @@ genome_t *start_genome;
 char curword[20];
 int id;
 
+vec3_t start_pos = { 0, 0, 0 }; // Position of the player spawn point.
+
 // Position of the end of level trigger.
 // TODO: Get the actual end-level trigger's position via engine, rather than hardcode it.
 vec3_t end_pos = { 1, 1, 1 };
+
+vector *distStorage; // Contains: vec3_t*. Stores all the final pos results of every genome ever.
 
 //ostringstream *fnamebuf;
 
@@ -53,11 +58,16 @@ int totalgenes = 0;
 int totalnodes = 0;
 int samples;  //For averaging
 
+char currLevel[128]; // The current level's name. For determining the spawn point.
+cbool gameLoaded = false;
+cbool spawnSet = false;
+
 void Neural_Init()
 {
 	Con_Printf("\nNeural population initialization\n");
 	inputs = vector_init();
 	outputs = vector_init();
+	distStorage = vector_init();
 
 	memset(evals, 0, NQ_NUM_RUNS * sizeof(int));
 	memset(genes, 0, NQ_NUM_RUNS * sizeof(int));
@@ -96,6 +106,8 @@ void Neural_Init()
 
 	for (int i = 0; i < NQ_OUTPUT_COUNT; i++) vector_add(outputs, 0);
 
+	//Population_Epoch(population, 1);
+
 	/*
 	for (int i = 0; i < network->inputs->count; i++)
 	{
@@ -122,9 +134,13 @@ void Neural_Init()
 	Con_Printf("Neural population initialized\n");
 }
 
-void Trace_Loop()
+cbool timeoutFlag = false;
+
+void Neural_Reload()
 {
 
+	gameLoaded = true;
+	spawnSet = false;
 }
 
 /*
@@ -220,15 +236,15 @@ void SV_NeuralThink(double frametime)
 */
 
 const int trace_length = 1000.0f;
-static int curOrgIndex = 0;
 
 void SV_NeuralThink(double frametime)
 {
 
 }
 
-int currSpecies = 0;
-int currOrganism = 0;
+static int currSpecies = 0;
+static int currOrganism = 0;
+static int generation = 0;
 
 void NQ_Timeout()
 {
@@ -238,8 +254,21 @@ void NQ_Timeout()
 	// Add the in-game clock timer to the organism when done.
 	organism->time_alive = cl.time;
 
+	// Store the player's current position as the organisms final position.
+	VectorCopy(cl_entities[cl.viewentity].origin, organism->final_pos);
+
+	// Add the final position of the organism to the global list.
+	vec3_t *final_pos = malloc(sizeof(vec3_t));
+
+	*(*final_pos + 0) = cl_entities[cl.viewentity].origin[0];
+	*(*final_pos + 1) = cl_entities[cl.viewentity].origin[1];
+	*(*final_pos + 2) = cl_entities[cl.viewentity].origin[2];
+
+	vector_add(distStorage, final_pos);
+
 	timeout = 0; 
 	timestep = 0;
+	timeoutFlag = true;
 
 	NQ_NextOrganism();
 }
@@ -261,76 +290,120 @@ void NQ_NextOrganism()
 			Species_Compute_Average_Fitness(population->species->data[i]);
 			Species_Compute_Max_Fitness(population->species->data[i]);
 		}
+
+		Population_Epoch(population, ++generation);
+		currOrganism = 0;
 	}
 
 	// The kill command reloads the level in single player.
 	Cmd_ExecuteString("kill", src_client);
 }
 
+// Used to determine timeout.
+vec3_t prev_pos;
+const double distance_to_timeout = 12.0;
+
 void CL_NeuralThink(double frametime)
 {
-	if (population != NULL)
+	if (population == NULL || !gameLoaded || cl.paused || key_dest == key_console) return;
+
+	float timescale = (host_timescale.value == 0) ? 1 : host_timescale.value;
+
+	if (!spawnSet)
 	{
-		timeout += frametime;
+		VectorCopy(cl_entities[cl.viewentity].origin, start_pos);
+		spawnSet = true;
 
-		// Don't mess with the network if we die.
-		if (cl.stats[STAT_HEALTH] > 0)
+		if (timeoutFlag)
 		{
-			timestep += frametime;
-
-			// Interact with network at 12FPS.
-			if (timestep > (double)1/12)
-			{
-				timestep = 0;
-
-				species_t *species = population->species->data[currSpecies];
-				organism_t *organism = species->organisms->data[currOrganism];
-
-				NQ_GetInputs();
-				NQ_Evaluate(organism);
-
-				// Timeout after 2 seconds if we die.
-				/*
-				{
-				double fitness = rightmost - pool.currentFrame / 2;
-
-				if (fitness == 0) fitness = -1;
-				organism->gnome->fitness = fitness;
-				organism->fitness = fitness;
-				if (fitness > pop->highest_fitness)
-				{
-				pop->highest_fitness = fitness;
-				}
-
-				if fitness > pool.maxFitness then
-				pool.maxFitness = fitness
-				forms.settext(maxFitnessLabel, "Max Fitness: " ..math.floor(pool.maxFitness))
-				writeFile("backup." ..pool.generation .. "." ..forms.gettext(saveLoadFile))
-				end
-
-				console.writeline("Gen " ..pool.generation .. " species " ..pool.currentSpecies .. " genome " ..pool.currentGenome .. " fitness: " ..fitness)
-				pool.currentSpecies = 1
-				pool.currentGenome = 1
-				while fitnessAlreadyMeasured() do
-				nextGenome()
-				end
-				initializeRun()
-				}
-				*/
-			}
+			timeoutFlag = false;
 		}
-		else if (timeout + 2 < NQ_TIMEOUT)
+		else // Add the spawn position of the player to check the sparseness of our results from.
 		{
-			timeout = NQ_TIMEOUT - 2;
-		}
+			vector_clear(distStorage);
+			vec3_t *firstStorage = malloc(sizeof(vec3_t));
 
-		if (timeout >= NQ_TIMEOUT) NQ_Timeout();
+			*(*firstStorage+0) = cl_entities[cl.viewentity].origin[0];
+			*(*firstStorage+1) = cl_entities[cl.viewentity].origin[1];
+			*(*firstStorage+2) = cl_entities[cl.viewentity].origin[2];
+
+			vector_add(distStorage, firstStorage);
+		}
 	}
+
+	if (DistanceBetween2Points(prev_pos, cl_entities[cl.viewentity].origin) > distance_to_timeout)
+	{
+		timeout = 0;
+		VectorCopy(cl_entities[cl.viewentity].origin, prev_pos);
+	}
+	else
+	{
+		timeout += frametime * timescale;
+	}
+
+	// Don't mess with the network if we die.
+	if (cl.stats[STAT_HEALTH] > 0)
+	{
+		timestep += frametime * timescale;
+
+		// Interact with network at 12FPS.
+		if (timestep > (double)1/12)
+		{
+
+			species_t *species = population->species->data[currSpecies];
+			organism_t *organism = species->organisms->data[currOrganism];
+
+			NQ_GetInputs();
+			NQ_Evaluate(organism);
+
+			// Timeout after 2 seconds if we die.
+			/*
+			{
+			double fitness = rightmost - pool.currentFrame / 2;
+
+			if (fitness == 0) fitness = -1;
+			organism->gnome->fitness = fitness;
+			organism->fitness = fitness;
+			if (fitness > pop->highest_fitness)
+			{
+			pop->highest_fitness = fitness;
+			}
+
+			if fitness > pool.maxFitness then
+			pool.maxFitness = fitness
+			forms.settext(maxFitnessLabel, "Max Fitness: " ..math.floor(pool.maxFitness))
+			writeFile("backup." ..pool.generation .. "." ..forms.gettext(saveLoadFile))
+			end
+
+			console.writeline("Gen " ..pool.generation .. " species " ..pool.currentSpecies .. " genome " ..pool.currentGenome .. " fitness: " ..fitness)
+			pool.currentSpecies = 1
+			pool.currentGenome = 1
+			while fitnessAlreadyMeasured() do
+			nextGenome()
+			end
+			initializeRun()
+			}
+			*/
+		}
+	}
+	else if (timeout + 2 < NQ_TIMEOUT)
+	{
+		timeout = NQ_TIMEOUT - 2;
+	}
+
+	if (sv_player != NULL && timeout >= NQ_TIMEOUT) NQ_Timeout();
 }
 
 void NQ_Evaluate(organism_t* organism)
 {
-	/***** INPUT GATHERING *****/
+	// Error Handling for null organism.
+	if (organism == NULL)
+	{
+		Con_Printf("NQ ERROR: ATTEMPTED TO EVALUATE ERRONEOUS GENOME.");
+		return;
+	}
+
+	/***** INPUT RETRIEVING *****/
 
 	// New values of each node to be passed into the network.
 	double nodeVals[NQ_INPUT_COUNT];
@@ -388,10 +461,24 @@ void NQ_Evaluate(organism_t* organism)
 
 	// This will hold the distances from our new behavior
 
-	int distCount = population->organisms->count;
+	int distCount = distStorage->count;
+
+	// Stored as a pointer array to allow compatibility with Quicksort function.
 	double **distList = malloc(distCount * sizeof(*distList));
 
-	// First get the distance from the rest of the population
+	// First get the distance of the point to the rest of the population.
+	for (unsigned int i = 0; i < distCount; i++)
+	{
+		double* distance = malloc(sizeof(distance));
+		vec3_t* other = distStorage->data[i];
+		*distance = (double)DistanceBetween2Points(cl_entities[cl.viewentity].origin, *other);
+		distList[i] = distance;
+	}
+
+	// Sort the list to get the closest distances.
+	Quicksort(0, distCount - 1, distList, Quicksort_Ascending);
+
+	/*
 	for (unsigned int i = 0; i < distCount; i++)
 	{
 		double* distance = malloc(sizeof(distance));
@@ -399,10 +486,6 @@ void NQ_Evaluate(organism_t* organism)
 		distList[i] = distance;
 	}
 
-	// sort the list, smaller first
-	Quicksort(0, population->organisms->count-1, distList, Quicksort_Ascending);
-
-	/*
 	for (unsigned int i = 0; i < population->species->count; i++)
 	{
 		species_t *curspecies = population->species->data[i];
@@ -414,99 +497,31 @@ void NQ_Evaluate(organism_t* organism)
 			vector_add(t_distances_list, (float)DistanceBetween2Points(end_pos, curorg->final_pos));
 		}
 	}
+
+	 then add all distances from the archive
+	 for (unsigned int i = 0; i<m_BehaviorArchive->size(); i++)
+	 {
+	 	t_distances_list.push_back(genome.m_PhenotypeBehavior->Distance_To(&((*m_BehaviorArchive)[i])));
+	 }
 	*/
 
-	// then add all distances from the archive
-	// for (unsigned int i = 0; i<m_BehaviorArchive->size(); i++)
-	// {
-	// 	t_distances_list.push_back(genome.m_PhenotypeBehavior->Distance_To(&((*m_BehaviorArchive)[i])));
-	// }
-
-
-	// Compute the sparseness
+	// Compute the sparseness of the point. The average distance away from the genome's point.
 	double sparseness = 0;
-	for (unsigned int i = 0; i < NQ_NOVELTY_COEFF; i++)
-	{
+	for (unsigned int i = 0; i < (int)fmin(NQ_NOVELTY_COEFF, distCount); i++)
 		sparseness += *distList[i];
-	}
+
 	sparseness /= NQ_NOVELTY_COEFF;
 
-	//return t_sparseness;
-
-	if (success) 
-	{
-		organism->fitness = 0;
-	}
-	else
-	{
-
-	}
+	organism->fitness = success ? sparseness : 0.001;
 
 	free(distList);
 }
-
-/*
-void CL_NeuralThink(double frametime)
-{
-	//run_num++;
-	//if (run_num > NQ_NUM_RUNS) return;
-
-	if (sv.max_edicts == 0) return;
-
-	// We still haven't evaluated all the organisms.
-
-	//timeout += frametime;
-	if (timeout > NQ_TIMEOUT) NQ_Timeout();
-
-	organism_t *currOrg = pop->organisms->data[curOrgIndex];
-
-	species_t *currSpecies;
-	genome_t *currGenome;
-
-	network_t *net = currOrg->net;
-
-	int net_depth = Network_Max_Depth(net);
-	double output_value = 0;
-
-	cbool success = false;
-	
-	// Output of inputs.
-	double input_out[NQ_INPUT_COUNT];
-	
-	for (int i = 0; i <= NQ_INPUT_COUNT; i++)
-	{
-		//Network_Load_Sensors();
-
-		success = Network_Activate(net);
-		for (int j = 0; j <= net_depth; j++)
-		{
-			success = Network_Activate(net);
-		}
-		output_value = ((neuron_t*)net->outputs->data[0])->activation;
-
-		input_out[i] = output_value;
-	}
-
-	int measured = 0;
-	int total = 0;
-	//for _, species in pairs(pool.species) do
-	//	for _, genome in pairs(species.genomes) do
-	//		total = total + 1
-	//		if genome.fitness ~= 0 then
-	//			measured = measured + 1
-	//			end
-	//			end
-	//			end
-}
-*/
 
 void NQ_GetInputs()
 {
 	// If the client doesn't have entities, it will 
 	// not have the player to trace from. Return.
 	if (sv.max_edicts == 0) return;
-
-	Con_Printf("Gathering Inputs...");
 
 	// Rotation delta per cell.
 	double deltaX = r_fovx / NQ_INPUT_COLS, deltaY = r_fovy / NQ_INPUT_ROWS;
@@ -607,18 +622,25 @@ char* outputCmds[NQ_OUTPUT_COUNT] = {
 
 void CL_NeuralMove() 
 {
+	if (!gameLoaded || timestep < (double)1 / 12 || cl.paused || key_dest == key_console) return;
+	timestep = 0;
+
 	// If the client doesn't have entities, it will 
 	// not have the player to trace from. Return.
 	if (sv.max_edicts == 0) return;
 
+	Con_Printf("Executing : [");
 	// Execute movement commands based on the output results of the network.
 	for (int i = 0; i < outputs->count; i++)
 	{
+		if (i > 0) Con_Printf(", ");
 		char cmd[80];
 		strcpy(cmd, (outputs->data[i] > 0) ? "+" : "-");
 		strcat(cmd, outputCmds[i]);
 		Cmd_ExecuteString(cmd, src_client);
+		Con_Printf("%s", cmd);
 	}
+	Con_Printf("]\n");
 }
 
 int expcount = 0;
@@ -711,6 +733,8 @@ cbool NQ_Epoch(population_t *pop, int generation, int *winnernum, int *winnergen
 
 void R_DrawNeuralData()
 {
+	R_DrawPoint(prev_pos, 12, (DistanceBetween2Points(prev_pos, cl_entities[cl.viewentity].origin) > distance_to_timeout) ? 15 : 7);
+
 	for (int i = 0; i < inputs->count; i++)
 	{
 		// Get the trace we gathered in NQ_GetInputs.
@@ -771,7 +795,7 @@ void SCR_DrawNeuralData()
 		c_strlcpy(str, "-------------+-------------");
 		Draw_String(x, (y++) * 8 - x, str);
 
-		organism_t *curOrg = population->organisms->data[curOrgIndex];
+		organism_t *curOrg = population->organisms->data[currOrganism];
 		if (curOrg != 0)
 		{
 
@@ -792,10 +816,10 @@ void SCR_DrawNeuralData()
 				if (((organism_t*)population->organisms->data[i])->champion)
 					bestOrgID = i;
 
-			c_snprintf2(str, "Fitness      |  %4i %4i", curOrg->fitness, curOrg->species->peak_fitness);
+			c_snprintf2(str, "Fitness      |  %4i %4i", (int)curOrg->fitness, (int)curOrg->species->peak_fitness);
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_snprintf2(str, "Genome       |  %4i %4i", curOrgIndex, bestOrgID);
+			c_snprintf2(str, "Genome       |  %4i %4i", currOrganism, bestOrgID);
 			Draw_String(x, (y++) * 8 - x, str);
 
 			c_snprintf2(str, "Species      |  %4i %4i", curOrg->species->id, bestSpeciesID);
@@ -809,16 +833,16 @@ void SCR_DrawNeuralData()
 		}
 		else
 		{
-			c_strlcpy(str, "Genome       |  - - ");
+			c_strlcpy(str, "Genome       |  -- --");
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_strlcpy(str, "Species      |  - - ");
+			c_strlcpy(str, "Species      |  -- --");
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_strlcpy(str, "Fitness      |  - - ");
+			c_strlcpy(str, "Fitness      |  -- --");
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_strlcpy(str, "Generation   |  - - ");
+			c_strlcpy(str, "Generation   |  -- --");
 			Draw_String(x, (y++) * 8 - x, str);
 		}
 	}
@@ -948,12 +972,12 @@ void Quicksort(int first, int last, void** array, cbool(*sort_func)(void*, void*
 	}
 }
 
-void Quicksort_Ascending(double* x, double* y)
+cbool Quicksort_Ascending(double* x, double* y)
 {
 	return (*x >= *y);
 }
 
-void Quicksort_Descending(double* x, double* y)
+cbool Quicksort_Descending(double* x, double* y)
 {
 	return (*x <= *y);
 }

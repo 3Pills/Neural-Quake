@@ -38,7 +38,7 @@ innovation_t* Innovation_Init(int nin, int nout, double num1, double num2, int n
 	return innovation;
 }
 
-innovation_t* Innovation_Init_Link(int nin, int nout, double num1, double w, int t) {
+innovation_t* Innovation_Init_Link(int nin, int nout, double num1, double w) {
 	innovation_t* innovation = malloc(sizeof(innovation_t));
 
 	innovation->innovation_type = NQ_NEWLINK;
@@ -46,7 +46,7 @@ innovation_t* Innovation_Init_Link(int nin, int nout, double num1, double w, int
 	innovation->node_out_id = nout;
 	innovation->innovation_num1 = num1;
 	innovation->new_weight = w;
-	innovation->new_trait_num = t;
+	//innovation->new_trait_num = t;
 
 	//Unused parameters set to zero
 	innovation->innovation_num2 = 0;
@@ -56,7 +56,7 @@ innovation_t* Innovation_Init_Link(int nin, int nout, double num1, double w, int
 	return innovation;
 }
 
-innovation_t* Innovation_Init_Link_Recur(int nin, int nout, double num1, double w, int t, cbool recur) {
+innovation_t* Innovation_Init_Link_Recur(int nin, int nout, double num1, double w, cbool recur) {
 	innovation_t* innovation = malloc(sizeof(innovation_t));
 
 	innovation->innovation_type = NQ_NEWLINK;
@@ -64,7 +64,7 @@ innovation_t* Innovation_Init_Link_Recur(int nin, int nout, double num1, double 
 	innovation->node_out_id = nout;
 	innovation->innovation_num1 = num1;
 	innovation->new_weight = w;
-	innovation->new_trait_num = t;
+	//innovation->new_trait_num = t;
 
 	//Unused parameters set to zero
 	innovation->innovation_num2 = 0;

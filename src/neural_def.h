@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __neural_def__
 #define __neural_def__
 
-#define NQ_POP_SIZE 500
+#define NQ_POP_SIZE 40
 #define NQ_NUM_RUNS 1
 
 #define NQ_INPUT_ROWS 9 // Total rows ray cast in the player's vision cone.
@@ -30,7 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NQ_INPUT_COUNT 135 // Input is NQ_INPUT_ROWS * NQ_INPUT_COLS rays cast outwards from the player to their immediate view.
 #define NQ_OUTPUT_COUNT 10 // Output is [Forward, Backward, MoveLeft, MoveRight, LookLeft, LookRight, LookUp, LookDown, Jump, Shoot]
 
-#define NQ_TIMEOUT 10 // Time in seconds before savestate is reloaded after player idles.
+#define NQ_TIMEOUT 2 // Time in seconds before savestate is reloaded after player idles.
 
 #define NQ_RECENT_AVERAGE_FACTOR 100 // Number of previous training samples to average.
 

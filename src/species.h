@@ -20,9 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __SPECIES_H__
 #define __SPECIES_H__
 
-#include "neural_def.h"
 #include "organism.h"
 #include "population.h"
+#include "vector.h"
 
 typedef struct organism_s organism_t;
 typedef struct population_s population_t;

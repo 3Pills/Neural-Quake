@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "network.h"
 #include "neural.h"
+#include "neural_def.h"
 #include <string.h>
 
 // This constructor allows the input and output lists to be supplied. Defaults to not using adaptation.
@@ -280,18 +281,18 @@ cbool Network_Activate(network_t* network)
 
 			if (curnode->type != NQ_SENSOR)
 			{
-				for (int j = 0; j < curnode->links_in; j++)
+				for (int j = 0; j < curnode->links_in->count; j++)
 				{
 					nlink_t* curlink = curnode->links_in->data[j];
 
-					if (curlink->trait_id == 2 ||
-						curlink->trait_id == 3 ||
-						curlink->trait_id == 4)
-					{
-						curlink->weight = Hebbian(curlink->weight, network->maxweight,
-							(curlink->recurrent) ? Neuron_Get_Active_Out_TD(curlink->inode) : Neuron_Get_Active_Out(curlink->inode),
-							Neuron_Get_Active_Out(curlink->onode), curlink->params[0], curlink->params[1], curlink->params[2]);
-					}
+					//if (curlink->trait_id == 2 ||
+					//	curlink->trait_id == 3 ||
+					//	curlink->trait_id == 4)
+					//{
+					//	curlink->weight = Hebbian(curlink->weight, network->maxweight,
+					//		(curlink->recurrent) ? Neuron_Get_Active_Out_TD(curlink->inode) : Neuron_Get_Active_Out(curlink->inode),
+					//		Neuron_Get_Active_Out(curlink->onode), 0, 0, 0);
+					//}
 				}
 			}
 		}
@@ -452,7 +453,7 @@ void Network_Link_Count_Helper(network_t* network, neuron_t *curnode, int *count
 cbool Network_Is_Recur(network_t* network, neuron_t *potin_node, neuron_t *potout_node, int *count, int thresh)
 {
 	(*count)++;
-	if (count > thresh) return false;
+	if (*count > thresh) return false;
 	if (potin_node == potout_node) return true;
 
 	for (int i = 0; i < potin_node->links_in->count; i++)

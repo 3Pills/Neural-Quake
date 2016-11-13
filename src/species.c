@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "species.h"
 #include "neural.h"
 #include <math.h>
+#include "neural_def.h"
 
 species_t* Species_Init(int i)
 {
@@ -114,7 +115,7 @@ organism_t* Species_Champion(species_t* species)
 cbool Species_Remove_Organism(species_t *species, organism_t *organism)
 {
 	for (int i = 0; i < species->organisms->count; i++)
-		if (((organism_t*)species->organisms->data[i]) == organism) 
+		if (species->organisms->data[i] == organism) 
 			vector_delete(species->organisms, i);
 
 	return false;
@@ -243,8 +244,6 @@ double Species_Count_Offspring(species_t *species, double skim)
 
 cbool Species_Reproduce(species_t *species, int generation, population_t* pop, vector *sorted_species)
 {
-	int count;
-	organism_t *curorg;
 
 	int orgnum;  //Random variable
 	int orgcount;
@@ -253,10 +252,6 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 	organism_t *baby;  //The new Organism
 
 	genome_t *new_genome;  //For holding baby's genes
-
-	species_t *curspecies;  //For adding baby
-	species_t *newspecies; //For babies in new Species
-	organism_t *comporg;  //For Species determination through comparison
 
 	species_t *randspecies;  //For mating outside the Species
 	double randmult;
@@ -270,8 +265,6 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 	cbool found;  //When a Species is found
 	cbool champ_done = false; //Flag the preservation of the champion  
 
-	int giveup; //For giving up finding a mate outside the species
-
 	cbool mut_struct_baby;
 	cbool mate_baby;
 
@@ -280,7 +273,6 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 
 	//Roulette wheel variables
 	double total_fitness = 0.0;
-	double marble;  //The marble will have a number between 0 and total_fitness
 	double spin;  //0Fitness total while the wheel is spinning
 
 	//Compute total fitness of species for a roulette wheel
@@ -312,7 +304,7 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 		if (peoplesChamp->super_champ_offspring > 0) 
 		{
 			mom = peoplesChamp;
-			new_genome = Genome_Duplicate(mom->gnome, count);
+			new_genome = Genome_Duplicate(mom->gnome, i);
 
 			//Most superchamp offspring will have their connection weights mutated only
 			//The last offspring will be an exact duplicate of this super_champ
@@ -348,7 +340,7 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 		else if (!champ_done && species->expected_offspring > 5)
 		{
 			mom = peoplesChamp; //Mom is the peoples champ
-			new_genome = Genome_Duplicate(mom->gnome, count);
+			new_genome = Genome_Duplicate(mom->gnome, i);
 			baby = Organism_Init(0.0, new_genome, generation, NULL);  //Baby is just like mommy
 			champ_done = true;
 		}
@@ -359,7 +351,7 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 			//Pick a random parent.
 			mom = species->organisms->data[Random_Int(0, poolsize)];
 
-			new_genome = Genome_Duplicate(mom->gnome, count);
+			new_genome = Genome_Duplicate(mom->gnome, i);
 
 			// Do the mutation depending on probabilities of various mutations
 			if (Random_Float() < NQ_MUTATE_ADD_NODE_PROB)
@@ -447,11 +439,11 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 			
 			//Perform mating based on probabilities of differrent mating types
 			if (Random_Float() < NQ_MATE_MULTIPOINT_PROB)
-				new_genome = Genome_Mate_Multipoint(mom->gnome, dad->gnome, count, mom->orig_fitness, dad->orig_fitness, outside);
+				new_genome = Genome_Mate_Multipoint(mom->gnome, dad->gnome, i, mom->orig_fitness, dad->orig_fitness, outside);
 			else if (Random_Float() < NQ_MATE_MULTIPOINT_AVG_PROB / (NQ_MATE_MULTIPOINT_AVG_PROB + NQ_MATE_SINGLEPOINT_PROB))
-				new_genome = Genome_Mate_Multipoint_Avg(mom->gnome, dad->gnome, count, mom->orig_fitness, dad->orig_fitness, outside);
+				new_genome = Genome_Mate_Multipoint_Avg(mom->gnome, dad->gnome, i, mom->orig_fitness, dad->orig_fitness, outside);
 			else
-				new_genome = Genome_Mate_Singlepoint(mom->gnome, dad->gnome, count);
+				new_genome = Genome_Mate_Singlepoint(mom->gnome, dad->gnome, i);
 
 			mate_baby = true;
 
@@ -510,21 +502,20 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 		baby->mate_baby = mate_baby;
 		if (pop->species->count == 0){
 			//Create the first species
-			newspecies = Species_Init(++(pop->last_species), true);
+			species_t *newspecies = Species_Init(++(pop->last_species), true);
 			vector_add(pop->species, newspecies);
 			Species_Add_Organism(newspecies, baby);  //Add the baby
 			baby->species = newspecies;  //Point the baby to its species
 		}
 		else {
-			comporg = pop->species->data[0];
 			found = false;
 			for (int j = 0; j < pop->species->count; j++)
 			{
-				comporg = pop->species->data[j];
+				organism_t *comporg = Species_First(pop->species->data[j]);
 				if (Genome_Compatibility(baby->gnome, comporg->gnome) < NQ_COMPAT_THRESHOLD)
 				{
-					Species_Add_Organism(curspecies, baby);
-					baby->species = curspecies;
+					Species_Add_Organism(pop->species->data[j], baby);
+					baby->species = pop->species->data[j];
 					found = true;
 					break;
 				}
@@ -532,7 +523,7 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 
 			//If we didn't find a match, create a new species
 			if (found == false) {
-				newspecies = Species_Init_Novel(++(pop->last_species), true);
+				species_t *newspecies = Species_Init_Novel(++(pop->last_species), true);
 				vector_add(pop->species, newspecies);
 				Species_Add_Organism(newspecies, baby);  //Add the baby
 				baby->species = newspecies;  //Point baby to its species

@@ -22,7 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __ORGANISM_H__
 #define __ORGANISM_H__
 
-#include "neural_def.h"
 #include "environment.h"
 #include "genome.h"
 #include "species.h"
