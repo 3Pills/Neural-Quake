@@ -835,7 +835,7 @@ void CL_SendCmd (void)
 	if (cls.signon == SIGNONS)
 	{
 		//stephenkoren: allow the neural network to input button commands.
-		CL_NeuralMove();
+		CL_NeuralMove (&cmd);
 
 	// get basic movement from keyboard
 		CL_BaseMove (&cmd);

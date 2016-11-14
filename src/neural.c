@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 population_t *population;
 vector *inputs; // Contains: trace_t*. A vector of input data gathered during the frame prior to 
-vector *outputs;
+double *outputs;
 
 double timeout = 0.0;
 double timestep = 0.0;
@@ -65,9 +65,6 @@ cbool spawnSet = false;
 void Neural_Init()
 {
 	Con_Printf("\nNeural population initialization\n");
-	inputs = vector_init();
-	outputs = vector_init();
-	distStorage = vector_init();
 
 	memset(evals, 0, NQ_NUM_RUNS * sizeof(int));
 	memset(genes, 0, NQ_NUM_RUNS * sizeof(int));
@@ -85,6 +82,8 @@ void Neural_Init()
 	Network_Activate(network);
 
 	Con_Printf("   Building Inputs and Outputs\n");
+
+	inputs = vector_init();
 
 	// Initialize a bunch of trace objects to store the data from input gathering in.
 	for (int i = 0; i < NQ_INPUT_COUNT; i++)
@@ -104,7 +103,10 @@ void Neural_Init()
 		vector_add(inputs, trace);
 	}
 
-	for (int i = 0; i < NQ_OUTPUT_COUNT; i++) vector_add(outputs, 0);
+	distStorage = vector_init();
+
+	outputs = malloc(sizeof(outputs)*NQ_OUTPUT_COUNT);
+	memset(outputs, 0, NQ_OUTPUT_COUNT * sizeof(double*));
 
 	//Population_Epoch(population, 1);
 
@@ -143,104 +145,7 @@ void Neural_Reload()
 	spawnSet = false;
 }
 
-/*
-void SV_NeuralThink(double frametime) 
-{
-	/*
-	// Define directional vectors.
-	vec3_t start, end, impact, direction;
-	VectorCopy(r_refdef.vieworg, start);
-
-	// Translate the player's view angles into directional vectors.
-	vec3_t forward, right, up;
-	AngleVectors(cl.viewangles, forward, right, up);
-
-	// Move the end position forward by the falloff distance amount.
-	VectorScale(forward, 200.0f, forward);
-	VectorAdd(start, forward, end);
-
-	// SV_Move returns a trace with all the data we need.
-	if (sv_player != NULL)
-	{
-		/*
-		trace = SV_Move(start, vec3_origin, vec3_origin, end, false, sv_player);
-
-		if (trace.fraction != 1.0) // fraction is 1.0 if nothing was hit.
-		{
-			if (trace.ent->v.solid == SOLID_BSP) // We traced a world clip.
-			{
-				Con_Printf("Traced world! | Impact normal: [%f, %f, %f]\n", trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
-			}
-			else // It's an entity of some kind!
-			{
-				Con_Printf("Traced entity! | Entity class: %s | impact normal: [%f, %f, %f]\n", PR_GetString(trace.ent->v.classname), trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
-			}
-			//Con_Printf("Traceline impact! ent: %s, normal: %s", trace.ent->v.classname, trace.plane.normal);
-		}
-
-		double angX = 90 - r_fovx / 2, angY = 90 - r_fovy;
-		double deltaX = r_fovx / NQ_INPUT_COLS, deltaY = r_fovy / NQ_INPUT_ROWS;
-
-		for (int i = 0; i < NQ_INPUT_ROWS; i++)
-		{
-			cbool yMid = (i == (NQ_INPUT_ROWS + 1) / 2);
-
-			for (int j = 0; j < NQ_INPUT_COLS; j++)
-			{
-				// Define directional vectors.
-				vec3_t start, end, impact, direction;
-				VectorCopy(r_refdef.vieworg, start);
-
-				// Translate the player's view angles into directional vectors.
-				vec3_t final_dir, forward, right, up;
-				AngleVectors(cl.viewangles, forward, right, up);
-
-				// Move the end position forward by the falloff distance amount.
-				VectorScale(forward, 200.0f, forward);
-				VectorAdd(start, forward, end);
-
-				cbool xMid = (j == (NQ_INPUT_COLS + 1) / 2);
-
-
-				TurnVector(final_dir, forward, up, angY + deltaY * i);
-				TurnVector(final_dir, forward, right, angX + deltaX * j);
-
-
-				trace_t trace = SV_Move(start, vec3_origin, vec3_origin, final_dir, false, sv_player);
-
-				if (trace.fraction != 1.0) // fraction is 1.0 if nothing was hit.
-				{
-					if (trace.ent->v.solid == SOLID_BSP) // We traced a world clip.
-					{
-						//Con_Printf("Traced world! | Impact normal: [%f, %f, %f]\n", trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
-					}
-					else // It's an entity of some kind!
-					{
-						//Con_Printf("Traced entity! | Entity class: %s | impact normal: [%f, %f, %f]\n", PR_GetString(trace.ent->v.classname), trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
-					}
-					//Con_Printf("Traceline impact! ent: %s, normal: %s", trace.ent->v.classname, trace.plane.normal);
-				}
-				
-
-				//int xFactor = (j < ceil(NQ_INPUT_COLS / 2)) ? -1 : (j == ceil(NQ_INPUT_COLS / 2)) ? 0 : 1;
-				
-				//TurnVector(final_dir, forward, right, r_fovx / 2 - cl.viewangles[Q_YAW]);
-				//TurnVector(frustum[0].normal, vpn, vright, r_fovx / 2 - 90); //left plane
-				//TurnVector(frustum[1].normal, vpn, vright, 90 - r_fovx / 2); //right plane
-				//TurnVector(frustum[2].normal, vpn, vup, 90 - r_fovy / 2); //bottom plane
-				//TurnVector(frustum[3].normal, vpn, vup, r_fovy / 2 - 90); //top plane
-			}
-		}
-	}
-}
-*/
-
 const int trace_length = 1000.0f;
-
-void SV_NeuralThink(double frametime)
-{
-
-}
 
 static int currSpecies = 0;
 static int currOrganism = 0;
@@ -295,17 +200,245 @@ void NQ_NextOrganism()
 		currOrganism = 0;
 	}
 
-	// The kill command reloads the level in single player.
-	Cmd_ExecuteString("kill", src_client);
+	// The reload the level in single player, otherwise kill the bot.
+	if (m_state == m_singleplayer) 
+		Cmd_ExecuteString(strcat("map ", cl.worldname), src_client);
+	else if (m_state == m_multiplayer)
+		Cmd_ExecuteString("kill", src_client);
+}
+
+void NQ_Evaluate(organism_t* organism)
+{
+	// Error Handling for null organism.
+	if (organism == NULL)
+	{
+		Con_Printf("NQ ERROR: ATTEMPTED TO EVALUATE ERRONEOUS GENOME.");
+		return;
+	}
+
+	/***** INPUT RETRIEVING *****/
+
+	// New values of each node to be passed into the network.
+	double nodeVals[NQ_INPUT_COUNT];
+
+	network_t *network = organism->net;
+
+	// Convert input traces into numerical values for network nodes.
+	for (int i = 0; i < inputs->count; i++)
+	{
+		trace_t *trace = inputs->data[i];
+
+		// Default value is 0.0, which will denote a flat ground to walk to. 
+		// Useful because the only time if check will not modify the input is if its empty space.
+		double nodeValue = 0.0;
+
+		if (trace->fraction != 1.0) // fraction is 1.0 if nothing was hit.
+		{
+			if (trace->ent->v.solid == SOLID_BSP) // We traced a world clip.
+			{
+				vec3_t up = { 0, 0, 1 };
+
+				// We want normals parallel to the up axis to be 0.
+				// We also want the range to be between 0.0 and 1.0, so down vectors
+				// will not drive the value up to 2.0 (1.0 - -1.0).
+				nodeValue = (1.0 - DotProduct(up, trace->plane.normal)) / 2;
+			}
+			else // It's an entity of some kind!
+			{
+				// -1.0 is a unique value for entities only.
+				nodeValue = -1.0;
+			}
+		}
+		nodeVals[i] = nodeValue;
+	}
+
+	/***** NETWORK PROCESSING *****/
+
+	// Add the node vals to the network.
+	Network_Load_Sensors(network, nodeVals);
+
+	cbool success = false;
+
+	// Process the values through the layers and relax network, using depth.
+	for (int i = 0; i <= Network_Max_Depth(network) + 1; i++)
+		success = Network_Activate(network);
+
+	// Take the activation value of the network into the global output vector for use with inputs.
+	for (int i = 0; i < network->outputs->count; i++)
+		outputs[i] = ((neuron_t*)network->outputs->data[i])->activation;
+
+	Network_Flush(network);
+
+	/***** FITNESS EVALUATION *****/
+
+	// This will hold the distances from our new behavior
+
+	int distCount = distStorage->count;
+
+	// Stored as a pointer array to allow compatibility with Quicksort function.
+	double **distList = malloc(distCount * sizeof(*distList));
+
+	// First get the distance of the point to the rest of the population.
+	for (int i = 0; i < distCount; i++)
+	{
+		double* distance = malloc(sizeof(distance));
+		vec3_t* other = distStorage->data[i];
+		*distance = (double)DistanceBetween2Points(cl_entities[cl.viewentity].origin, *other);
+		distList[i] = distance;
+	}
+
+	// Sort the list to get the closest distances.
+	Quicksort(0, distCount - 1, distList, Quicksort_Ascending);
+
+	double fitness = 0.0;
+
+	// Compute the sparseness of the point. The average distance away from the genome's point.
+	double sparseness = 0.0;
+	for (unsigned int i = 0; i < (unsigned int)fmin(NQ_NOVELTY_COEFF, distCount); i++)
+		sparseness += *distList[i];
+
+	sparseness /= NQ_NOVELTY_COEFF;
+
+	// Assign the sparseness as the base fitness value.
+	fitness = sparseness;
+
+	// Increate the fitness value based on a number of stats.
+	fitness += cl.stats[STAT_MONSTERS] * 100; // Monster kills. Single player.
+	fitness += cl.stats[STAT_SECRETS] * 250; // Secrets found. Single player.
+	fitness += cl.stats[STAT_FRAGS] * 500; // Player kills. Multi player.
+
+	// Lower the final fitness value by a maximum of 80% based on the player's health.
+	fitness = sparseness * (1 - ((1 - cl.stats[STAT_HEALTH] / 100) * 0.8));
+
+	organism->fitness = success ? sparseness : 0.001;
+
+	free(distList);
+}
+
+void NQ_GetInputs()
+{
+	// If the client doesn't have entities, it will 
+	// not have the player to trace from. Return.
+	if (sv.max_edicts == 0) return;
+
+	// Rotation delta per cell.
+	double deltaX = r_fovx / NQ_INPUT_COLS, deltaY = r_fovy / NQ_INPUT_ROWS;
+
+	// Starting angle offset from centre. 
+	// These angles combine to be the top left corner of the player's view.
+	double angX = (-r_fovx + deltaX) / 2, angY = (-r_fovy + deltaY) / 2;
+
+	// Define directional vectors.
+	vec3_t view_pos;
+	VectorCopy(r_refdef.vieworg, view_pos);
+
+	// Player's directional view vectors.
+	vec3_t view_f, view_r, view_u;
+
+	// Translate the player's view angles into directional vectors.
+	AngleVectors(cl.viewangles, view_f, view_r, view_u);
+
+	// Intermediate operational vector values.
+	vec3_t final_pitch, final_r, final_dir, final_pos;
+
+	for (int i = 0; i < NQ_INPUT_ROWS; i++)
+	{
+		// Bool to stop rotations along pitch if centred on the player's view.
+		// This exists solely for code optimisation.
+		cbool midY = (i == (int)(NQ_INPUT_ROWS / 2));
+
+		if (midY) // Pitch is the same as the view.
+		{
+			VectorCopy(view_f, final_pitch);
+		}
+		else
+		{
+			//Rotate final_dir to the final pitch.
+			TurnVector(final_pitch, view_f, view_u, angY + deltaY * i);
+		}
+
+		for (int j = 0; j < NQ_INPUT_COLS; j++)
+		{
+			// Bool to stop rotations along yaw if centred on the player's view.
+			cbool midX = (j == (int)(NQ_INPUT_COLS / 2));
+
+			if (midX) // Yaw is the same as the view
+			{
+				if (midY)
+				{
+					// The direction is the view forward.
+					VectorCopy(view_f, final_dir);
+				}
+				else
+				{
+					// No need to calculate yaw. Use pitch as the final direction.
+					VectorCopy(final_pitch, final_dir);
+				}
+			}
+			else
+			{
+				if (midY)
+				{
+					VectorCopy(view_r, final_r); // Right hasn't changed.
+				}
+				else
+				{
+					// Calculate the new right vector using the new forward.
+					CrossProduct(final_pitch, view_u, final_r);
+				}
+
+				// Rotate forward to the final yaw and subsequently final direction.
+				TurnVector(final_dir, final_pitch, final_r, angX + deltaX * j);
+			}
+
+			// Scale the end direction forward by the falloff distance amount.
+			VectorScale(final_dir, trace_length, final_dir);
+
+			// Move the direction to world space and to the final pos.
+			VectorAdd(final_dir, view_pos, final_pos);
+
+			// Complete a trace, ignoring EDICT_NUM(1).
+			// This will always be the client's player entity.
+			trace_t trace = SV_Move(view_pos, vec3_origin, vec3_origin,
+				final_pos, false, EDICT_NUM(1));
+
+
+			// We use the plane distance value as a color value, because we don't 
+			// need this information, and we need extra storage for debug colors.
+			trace.plane.dist = 15;
+
+			if (trace.fraction != 1.0) // fraction is 1.0 if nothing was hit.
+			{
+				if (trace.ent->v.solid == SOLID_BSP) // We traced a world clip.
+				{
+					vec3_t up = { 0, 0, 1 };
+					trace.plane.dist = 242 + (4.0 - DotProduct(up, trace.plane.normal) * 4);
+				}
+				else // It's an entity of some kind!
+				{
+					trace.plane.dist = 79;
+				}
+			}
+			else // Hit nothing
+			{
+				trace.plane.dist = 40;
+			}
+
+			// Copy trace data to the input data for the frame.
+			TraceCopy(&trace, inputs->data[j + NQ_INPUT_COLS*i]);
+		}
+	}
 }
 
 // Used to determine timeout.
 vec3_t prev_pos;
-const double distance_to_timeout = 12.0;
+
+// Roughly the distance of a jump.
+const double distance_to_timeout = 64.0;
 
 void CL_NeuralThink(double frametime)
 {
-	if (population == NULL || !gameLoaded || cl.paused || key_dest == key_console) return;
+	if (population == NULL || !gameLoaded || cl.paused || key_dest != key_game) return;
 
 	float timescale = (host_timescale.value == 0) ? 1 : host_timescale.value;
 
@@ -394,225 +527,6 @@ void CL_NeuralThink(double frametime)
 	if (sv_player != NULL && timeout >= NQ_TIMEOUT) NQ_Timeout();
 }
 
-void NQ_Evaluate(organism_t* organism)
-{
-	// Error Handling for null organism.
-	if (organism == NULL)
-	{
-		Con_Printf("NQ ERROR: ATTEMPTED TO EVALUATE ERRONEOUS GENOME.");
-		return;
-	}
-
-	/***** INPUT RETRIEVING *****/
-
-	// New values of each node to be passed into the network.
-	double nodeVals[NQ_INPUT_COUNT];
-
-	network_t *network = organism->net;
-
-	// Convert input traces into numerical values for network nodes.
-	for (int i = 0; i < inputs->count; i++)
-	{
-		trace_t *trace = inputs->data[i];
-
-		// Default value is 0.0, which will denote a flat ground to walk to. 
-		// Useful because the only time if check will not modify the input is if its empty space.
-		double nodeValue = 0.0;
-
-		if (trace->fraction != 1.0) // fraction is 1.0 if nothing was hit.
-		{
-			if (trace->ent->v.solid == SOLID_BSP) // We traced a world clip.
-			{
-				vec3_t up = { 0, 0, 1 };
-
-				// We want normals parallel to the up axis to be 0.
-				// We also want the range to be between 0.0 and 1.0, so down vectors
-				// will not drive the value up to 2.0 (1.0 - -1.0).
-				nodeValue = (1.0 - DotProduct(up, trace->plane.normal)) / 2;
-			}
-			else // It's an entity of some kind!
-			{
-				// -1.0 is a unique value for entities only.
-				nodeValue = -1.0;
-			}
-		} 
-		nodeVals[i] = nodeValue;
-	}
-
-	/***** NETWORK PROCESSING *****/
-
-	// Add the node vals to the network.
-	Network_Load_Sensors(network, nodeVals);
-
-	cbool success = false;
-
-	// Process the values through the layers and relax network, using depth.
-	for (int i = 0; i <= Network_Max_Depth(network) + 1; i++)
-		success = Network_Activate(network);
-
-	// Take the activation value of the network into the global output vector for use with inputs.
-	for (int i = 0; i < network->outputs->count; i++)
-		outputs->data[i] = &((neuron_t*)network->outputs->data[i])->activation;
-
-	Network_Flush(network);
-
-
-	/***** FITNESS EVALUATION *****/
-
-	// This will hold the distances from our new behavior
-
-	int distCount = distStorage->count;
-
-	// Stored as a pointer array to allow compatibility with Quicksort function.
-	double **distList = malloc(distCount * sizeof(*distList));
-
-	// First get the distance of the point to the rest of the population.
-	for (unsigned int i = 0; i < distCount; i++)
-	{
-		double* distance = malloc(sizeof(distance));
-		vec3_t* other = distStorage->data[i];
-		*distance = (double)DistanceBetween2Points(cl_entities[cl.viewentity].origin, *other);
-		distList[i] = distance;
-	}
-
-	// Sort the list to get the closest distances.
-	Quicksort(0, distCount - 1, distList, Quicksort_Ascending);
-
-	/*
-	for (unsigned int i = 0; i < distCount; i++)
-	{
-		double* distance = malloc(sizeof(distance));
-		*distance = DistanceBetween2Points(end_pos, ((organism_t*)population->organisms->data[i])->final_pos);
-		distList[i] = distance;
-	}
-
-	for (unsigned int i = 0; i < population->species->count; i++)
-	{
-		species_t *curspecies = population->species->data[i];
-		for (unsigned int j = 0; j < curspecies->organisms->count; j++)
-		{
-			organism_t *curorg = curspecies->organisms->data[j];
-			double distance = genome.m_PhenotypeBehavior->Distance_To(curorg);
-
-			vector_add(t_distances_list, (float)DistanceBetween2Points(end_pos, curorg->final_pos));
-		}
-	}
-
-	 then add all distances from the archive
-	 for (unsigned int i = 0; i<m_BehaviorArchive->size(); i++)
-	 {
-	 	t_distances_list.push_back(genome.m_PhenotypeBehavior->Distance_To(&((*m_BehaviorArchive)[i])));
-	 }
-	*/
-
-	// Compute the sparseness of the point. The average distance away from the genome's point.
-	double sparseness = 0;
-	for (unsigned int i = 0; i < (int)fmin(NQ_NOVELTY_COEFF, distCount); i++)
-		sparseness += *distList[i];
-
-	sparseness /= NQ_NOVELTY_COEFF;
-
-	organism->fitness = success ? sparseness : 0.001;
-
-	free(distList);
-}
-
-void NQ_GetInputs()
-{
-	// If the client doesn't have entities, it will 
-	// not have the player to trace from. Return.
-	if (sv.max_edicts == 0) return;
-
-	// Rotation delta per cell.
-	double deltaX = r_fovx / NQ_INPUT_COLS, deltaY = r_fovy / NQ_INPUT_ROWS;
-
-	// Starting angle offset from centre. 
-	// These angles combine to be the top left corner of the player's view.
-	double angX = (-r_fovx + deltaX) / 2, angY = (-r_fovy + deltaY) / 2;
-
-	// Define directional vectors.
-	vec3_t view_pos;
-	VectorCopy(r_refdef.vieworg, view_pos);
-
-	// Player's directional view vectors.
-	vec3_t view_f, view_r, view_u;
-
-	// Translate the player's view angles into directional vectors.
-	AngleVectors(cl.viewangles, view_f, view_r, view_u);
-
-	// Intermediate operational vector values.
-	vec3_t final_pitch, final_r, final_dir, final_pos;
-
-	for (int i = 0; i < NQ_INPUT_ROWS; i++)
-	{
-		// Bool to stop rotations along pitch if centred on the player's view.
-		// This exists solely for code optimisation.
-		cbool midY = (i == (int)(NQ_INPUT_ROWS / 2));
-
-		if (midY) // Pitch is the same as the view.
-		{
-			VectorCopy(view_f, final_pitch);
-		}
-		else
-		{
-			//Rotate final_dir to the final pitch.
-			TurnVector(final_pitch, view_f, view_u, angY + deltaY * i);
-		}
-
-		for (int j = 0; j < NQ_INPUT_COLS; j++)
-		{
-			// Bool to stop rotations along yaw if centred on the player's view.
-			cbool midX = (j == (int)(NQ_INPUT_COLS / 2));
-
-			if (midX) // Yaw is the same as the view
-			{
-				if (midY)
-				{
-					// The direction is the view forward.
-					VectorCopy(view_f, final_dir);
-				}
-				else
-				{
-					// No need to calculate yaw. Use pitch as the final direction.
-					VectorCopy(final_pitch, final_dir);
-				}
-			}
-			else
-			{
-				if (midY) 
-				{ 
-					VectorCopy(view_r, final_r); // Right hasn't changed.
-				}
-				else
-				{
-					// Calculate the new right vector using the new forward.
-					CrossProduct(final_pitch, view_u, final_r);
-				}
-
-				// Rotate forward to the final yaw and subsequently final direction.
-				TurnVector(final_dir, final_pitch, final_r, angX + deltaX * j);
-			}
-
-			// Scale the end direction forward by the falloff distance amount.
-			VectorScale(final_dir, trace_length, final_dir);
-
-			// Move the direction to world space and to the final pos.
-			VectorAdd(final_dir, view_pos, final_pos);
-
-			// The final color of the point to draw, as defined on the quake pallete.
-			int c = 15;
-
-			// Complete a trace, ignoring EDICT_NUM(1).
-			// This will always be the client's player entity.
-			trace_t trace = SV_Move(view_pos, vec3_origin, vec3_origin,
-				final_pos, false, EDICT_NUM(1));
-
-			// Copy trace data to the input data for the frame.
-			TraceCopy(&trace, inputs->data[j + NQ_INPUT_COLS*i]);
-		}
-	}
-}
-
 // Output commands without +/- prefix. Prefix will be added 
 // depending on the output of the network.
 char* outputCmds[NQ_OUTPUT_COUNT] = {
@@ -620,169 +534,70 @@ char* outputCmds[NQ_OUTPUT_COUNT] = {
 	"left", "right", "lookup", "lookdown", "attack", "jump"
 };
 
-void CL_NeuralMove() 
+void CL_NeuralMove(usercmd_t *cmd) 
 {
-	if (!gameLoaded || timestep < (double)1 / 12 || cl.paused || key_dest == key_console) return;
-	timestep = 0;
-
 	// If the client doesn't have entities, it will 
 	// not have the player to trace from. Return.
-	if (sv.max_edicts == 0) return;
+	if (!gameLoaded || sv.max_edicts == 0) return;
+
+	// Timestep for input gathering and engine output.
+	if (timestep < (double)1 / 12) return;
+
+	// We need to disable all inputs if we're paused or otherwise not inputting to the game.
+	if (cl.paused || key_dest != key_game)
+	{
+		for (int i = 0; i < NQ_OUTPUT_COUNT; i++)
+		{
+			char out_cmd[80];
+			strcpy(out_cmd, "-");
+			strcat(out_cmd, outputCmds[i]);
+			Cmd_ExecuteString(out_cmd, src_client);
+		}
+		return;
+	}
+
+	timestep = 0;
 
 	Con_Printf("Executing : [");
 	// Execute movement commands based on the output results of the network.
-	for (int i = 0; i < outputs->count; i++)
+	for (int i = 0; i < NQ_OUTPUT_COUNT; i++)
 	{
 		if (i > 0) Con_Printf(", ");
-		char cmd[80];
-		strcpy(cmd, (outputs->data[i] > 0) ? "+" : "-");
-		strcat(cmd, outputCmds[i]);
-		Cmd_ExecuteString(cmd, src_client);
-		Con_Printf("%s", cmd);
+		char out_cmd[80];
+		double output = outputs[i];
+		strcpy(out_cmd, (output > 0.5) ? "+" : "-");
+		strcat(out_cmd, outputCmds[i]);
+		Cmd_ExecuteString(out_cmd, src_client);
+		Con_Printf("%s", out_cmd);
 	}
 	Con_Printf("]\n");
 }
 
 int expcount = 0;
-void NQ_Test()
-{
-
-	/*
-	ifstream iFile("xorstartgenes", ios::in);
-
-	cout << "START XOR TEST" << endl;
-
-	cout << "Reading in the start genome" << endl;
-	//Read in the start Genome
-	iFile >> curword;
-	iFile >> id;
-	cout << "Reading in Genome id " << id << endl;
-
-	start_genome = new Genome(id, iFile);
-	iFile.close();
-	*/
-
-	for (int epoch = 1; epoch <= 100; epoch++) {
-		printf("Epoch %i\n", epoch);
-
-		//This is how to make a custom filename
-
-		//fnamebuf = new ostringstream();
-		//(*fnamebuf) << "gen_" << gen << ends;  //needs end marker
-
-		//cout << "name of fname: " << fnamebuf->str() << endl;
-
-
-		char temp[50];
-		sprintf(temp, "gen_%d", epoch);
-
-		//Check for success
-		if (NQ_Epoch(population, epoch, winnernum, winnergenes, winnernodes))
-		{
-			//Collect Stats on end of experiment
-			evals[expcount] = NQ_POP_SIZE*(epoch - 1) + winnernum;
-			genes[expcount] = winnergenes;
-			nodes[expcount] = winnernodes;
-			epoch = 100;
-		}
-
-		//Clear output filename
-		//fnamebuf->clear();
-		//delete fnamebuf;
-
-	}
-
-	/*
-	//Average and print stats
-	printf("Nodes: \n");
-	for (int i = 0; i < NQ_NUM_RUNS; i++) {
-		printf("%i\n", nodes[i]);
-		totalnodes += nodes[i];
-	}
-
-	printf("Genes: \n");
-	for (int i = 0; i < NQ_NUM_RUNS; i++) {
-		printf("%i\n", genes[i]);
-		totalgenes += genes[i];
-	}
-
-	printf("Evals: \n");
-	samples = 0;
-	for (int i = 0; i < NQ_NUM_RUNS; i++) {
-		printf("%i\n", evals[i]);
-		if (evals[i] > 0)
-		{
-			totalevals += evals[expcount];
-			samples++;
-		}
-	}
-
-	printf("Failures: %i out of %i runs\n", (NQ_NUM_RUNS - samples), NQ_NUM_RUNS);
-	printf("Average Nodes: %d\n", (samples > 0 ? (double)totalnodes / samples : 0));
-	printf("Average Genes: %d\n", (samples > 0 ? (double)totalgenes / samples : 0));
-	printf("Average Evals: %d\n", (samples > 0 ? (double)totalevals / samples : 0));
-
-	return pop;
-	*/
-}
-
-cbool NQ_Epoch(population_t *pop, int generation, int *winnernum, int *winnergenes, int *winnernodes)
-{
-	return false;
-}
 
 void R_DrawNeuralData()
 {
 	R_DrawPoint(prev_pos, 12, (DistanceBetween2Points(prev_pos, cl_entities[cl.viewentity].origin) > distance_to_timeout) ? 15 : 7);
 
+	// Draw the impact point of the traces we gathered in NQ_GetInputs.
 	for (int i = 0; i < inputs->count; i++)
 	{
-		// Get the trace we gathered in NQ_GetInputs.
 		trace_t* trace = inputs->data[i];
-
-		// The final color of the point to draw, as defined on the quake pallete.
-		int c = 15;
-
-		if (trace->fraction != 1.0) // fraction is 1.0 if nothing was hit.
-		{
-			if (trace->ent->v.solid == SOLID_BSP) // We traced a world clip.
-			{
-				c = 61;
-			}
-			else // It's an entity of some kind!
-			{
-				c = 79;
-			}
-		}
-		else // Hit nothing
-		{
-			c = 40;
-		}
-
-		R_DrawPoint(trace->endpos, fmax(8 * trace->fraction, 1), c);
+		// We use the otherwise unused plane.dist for debug color storage.
+		R_DrawPoint(trace->endpos, fmax(8 * trace->fraction, 1), trace->plane.dist);
 	}
 }
 
-void SCR_DrawNeuralData()
+void Draw_NeuralStats()
 {
-	if (!neuraldisplay.value) return;
-
-	// Set to draw from the top left.
-	Draw_SetCanvas(CANVAS_TOPRIGHT);
-
-	int y = 25 - 7.5; //9=number of lines to print
-	Draw_Fill(0, y * 7.5, 25 * 9, 9 * 8, 0, 0.5); //dark rectangle
-
-
 	// Drawing Neural statistics here.
 	Draw_SetCanvas(CANVAS_BOTTOMLEFT);
 
-	//int y = 25 - 7.5; //9=number of lines to print
 	int x = 4; //margin
+	int y = 25 - 7.5;
 	char str[40];
 
 	Draw_Fill(0, y * 7.5, 25 * 9, 9 * 8, 0, 0.5); //dark rectangle
-
 
 	if (population != 0)
 	{
@@ -804,7 +619,7 @@ void SCR_DrawNeuralData()
 			for (int i = 0; i < population->species->count; i++)
 			{
 				species_t *species = population->species->data[i];
-			
+
 				if (bestSpecies == 0 || bestSpecies->peak_fitness < species->peak_fitness)
 				{
 					bestSpecies = species;
@@ -846,6 +661,44 @@ void SCR_DrawNeuralData()
 			Draw_String(x, (y++) * 8 - x, str);
 		}
 	}
+}
+
+void Draw_NeuralGraph()
+{
+	// Set to draw from the top left.
+	Draw_SetCanvas(CANVAS_TOPRIGHT);
+
+	int y = 25 - 7.5;
+	Draw_Fill(0, y * 7.5, 25 * 9, 9 * 8, 0, 0.5); //dark rectangle
+
+	if (population != 0)
+	{
+		if (inputs != 0 && inputs->count > 0)
+		{
+			for (int i = 0; i < NQ_INPUT_COUNT; i++)
+			{
+				trace_t* trace = inputs->data[i];
+				// We use the otherwise unused plane.dist for debug color storage.
+				Draw_Square(i * 10, 0, 8, 8, 1, trace->plane.dist, 1);
+			}
+		}
+
+		if (outputs != 0)
+		{
+			for (int i = 0; i < NQ_OUTPUT_COUNT; i++)
+			{
+				Draw_Square(i * 10, 80, 8, 8, 1, outputs[i] > 0.5 ? 251 : 248, 1);
+			}
+		}
+	}
+}
+
+void SCR_DrawNeuralData()
+{
+	if (!neuraldisplay.value) return;
+
+	Draw_NeuralGraph();
+	Draw_NeuralStats();
 }
 
 /*
@@ -932,14 +785,9 @@ int Random_Int(int x, int y)
 	return rand() % (y - x + 1) + x;
 }
 
-int Random_Float()
+float Random_Float()
 {
 	return (float)rand() / (float)RAND_MAX;
-}
-
-int Random_Sign() 
-{
-	return (rand() % 2) ? 1 : -1; 
 }
 
 void Quicksort(int first, int last, void** array, cbool(*sort_func)(void*, void*))

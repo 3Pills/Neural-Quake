@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "population.h"
 #include "neural_def.h"
+#include <stdlib.h>
 
 population_t *Population_Init(genome_t *g, int size)
 {

@@ -695,9 +695,6 @@ void _Host_Frame (double time)
 	if (sv.active)
 	{
 		SV_UpdateServer(sv_frametime);
-
-		// stephenkoren: World is updated - let the AI respond to it!
-		SV_NeuralThink(sv_frametime);
 	}
 
 //-------------------

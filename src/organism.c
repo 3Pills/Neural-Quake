@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "organism.h"
 #include "neural_def.h"
 #include <string.h>
+#include <stdlib.h>
 
 organism_t* Organism_Init(double fit, genome_t* g, int gen, const char* md)
 {

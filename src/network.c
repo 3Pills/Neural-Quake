@@ -475,8 +475,7 @@ int Network_Input_Start(network_t* network)
 
 int Network_Load_In(network_t* network, double d)
 {
-	Neuron_Sensor_Load(network->input_ptr, d);
-
+	return Neuron_Sensor_Load(network->input_ptr, d) ? 1 : 0;
 }
 
 // If all output are not active then return true

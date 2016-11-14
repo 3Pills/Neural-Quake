@@ -19,8 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "species.h"
 #include "neural.h"
-#include <math.h>
 #include "neural_def.h"
+#include <math.h>
+#include <stdlib.h>
 
 species_t* Species_Init(int i)
 {
@@ -244,9 +245,6 @@ double Species_Count_Offspring(species_t *species, double skim)
 
 cbool Species_Reproduce(species_t *species, int generation, population_t* pop, vector *sorted_species)
 {
-
-	int orgnum;  //Random variable
-	int orgcount;
 	organism_t *mom; //Parent Organisms
 	organism_t *dad;
 	organism_t *baby;  //The new Organism
@@ -256,10 +254,8 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 	species_t *randspecies;  //For mating outside the Species
 	double randmult;
 	int randspeciesnum;
-	int spcount;
 
 	network_t *net_analogue;  //For adding link to test for recurrency
-	int pause;
 
 	cbool outside;
 	cbool found;  //When a Species is found
@@ -273,7 +269,6 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 
 	//Roulette wheel variables
 	double total_fitness = 0.0;
-	double spin;  //0Fitness total while the wheel is spinning
 
 	//Compute total fitness of species for a roulette wheel
 	//Note: You don't get much advantage from a roulette here
@@ -318,7 +313,7 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 					//Sometimes we add a link to a superchamp
 					net_analogue = Genome_Genesis(new_genome, generation);
 					Genome_Mutate_Add_Link(new_genome, pop->innovations, pop->cur_innov_num, NQ_NEWLINK_TRIES);
-					Genome_Delete(net_analogue);
+					Network_Delete(net_analogue);
 					mut_struct_baby = true;
 				}
 			}
@@ -363,7 +358,7 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 			{
 				net_analogue = Genome_Genesis(new_genome, generation);
 				Genome_Mutate_Add_Link(new_genome, pop->innovations, pop->cur_innov_num, NQ_NEWLINK_TRIES);
-				Genome_Delete(net_analogue);
+				Network_Delete(net_analogue);
 				mut_struct_baby = true;
 			}
 			//NOTE:  A link CANNOT be added directly after a node was added because the phenotype
@@ -464,7 +459,7 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 				{
 					net_analogue = Genome_Genesis(new_genome, generation);
 					Genome_Mutate_Add_Link(new_genome, pop->innovations, pop->cur_innov_num, NQ_NEWLINK_TRIES);
-					Genome_Delete(net_analogue);
+					Network_Delete(net_analogue);
 
 					mut_struct_baby = true;
 				}
@@ -501,8 +496,8 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 		baby->mut_struct_baby = mut_struct_baby;
 		baby->mate_baby = mate_baby;
 		if (pop->species->count == 0){
-			//Create the first species
-			species_t *newspecies = Species_Init(++(pop->last_species), true);
+			//Create the first species			
+			species_t *newspecies = Species_Init_Novel(++(pop->last_species), true);
 			vector_add(pop->species, newspecies);
 			Species_Add_Organism(newspecies, baby);  //Add the baby
 			baby->species = newspecies;  //Point the baby to its species

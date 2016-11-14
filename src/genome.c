@@ -354,7 +354,7 @@ genome_t* Genome_Init_Structure(int new_id, int input_count, int output_count, i
 					}
 
 					//Create the gene
-					double new_weight = Random_Sign() * Random_Float();
+					double new_weight = (Random_Float() - 0.5) * 2;
 
 					//Add the gene to the genome
 					//vector_add(genome->genes, Gene_Init_Trait(newtrait, new_weight, in_node, out_node, false, count, new_weight));
@@ -383,7 +383,7 @@ genome_t* Genome_Init_Structure(int new_id, int input_count, int output_count, i
 					}
 
 					//Create the gene
-					double new_weight = Random_Sign() * Random_Float();
+					double new_weight = (Random_Float() - 0.5) * 2;
 
 					//Add the gene to the genome
 					//vector_add(genome->genes, Gene_Init_Trait(newtrait, new_weight, in_node, out_node, false, count, new_weight));
@@ -833,7 +833,7 @@ void Genome_Mutate_Link_Weights(genome_t *genome, double power, double rate, enu
 			//randnum=gaussrand()*powermod;
 			//randnum=gaussrand();
 
-			double randnum = Random_Sign() * Random_Float() * power;
+			double randnum = ((Random_Float() - 0.5) * 2) * power;
 			//std::cout << "RANDOM: " << randnum << " " << randposneg() << " " << randfloat() << " " << power << " " << powermod << std::endl;
 			if (mut_type == NQ_GAUSSIAN) {
 				double randchoice = Random_Float();
@@ -847,8 +847,6 @@ void Genome_Mutate_Link_Weights(genome_t *genome, double power, double rate, enu
 
 			//Cap the weights at 8.0 (experimental)
 			curgene->link->weight = fmin(fmax(-8.0, curgene->link->weight), 8.0);
-
-			Con_Printf("Random weight link = %f\n", curgene->link->weight);
 
 			//Record the innovation
 			curgene->mutation_num = curgene->link->weight;
@@ -1103,7 +1101,8 @@ cbool Genome_Mutate_Add_Link(genome_t *genome, vector *innovs, double curinnov, 
 
 		if (gene == 0)
 		{
-			recurflag = Network_Is_Recur(genome->phenotype, nodep1->analogue, nodep2->analogue, 0, thresh);
+			int count = 0;
+			recurflag = Network_Is_Recur(genome->phenotype, nodep1->analogue, nodep2->analogue, &count, thresh);
 
 			//ADDED: CONSIDER connections out of outputs recurrent
 			if (nodep1->type == NQ_OUTPUT || nodep2->type == NQ_OUTPUT)
@@ -1139,7 +1138,7 @@ cbool Genome_Mutate_Add_Link(genome_t *genome, vector *innovs, double curinnov, 
 
 				//Choose the new weight
 				//newweight=(gaussrand())/1.5;  //Could use a gaussian
-				double newweight = Random_Sign() * Random_Float();
+				double newweight = (Random_Float() - 0.5) * 2;
 
 				newgene = Gene_Init_Trait(newweight, nodep1, nodep2, recurflag, curinnov, newweight);
 
@@ -1147,6 +1146,7 @@ cbool Genome_Mutate_Add_Link(genome_t *genome, vector *innovs, double curinnov, 
 				vector_add(innovs, Innovation_Init_Link(nodep1->node_id, nodep2->node_id, curinnov, newweight));
 
 				curinnov = curinnov + 1.0;
+				break;
 			}
 			else 
 			{
@@ -1237,7 +1237,7 @@ void Genome_Mutate_Add_Sensor(genome_t *genome, vector *innovs, double curinnov)
 
 					//Choose the new weight
 					//newweight=(gaussrand())/1.5;  //Could use a gaussian
-					double newweight = Random_Sign() * Random_Float() * 3.0; //used to be 10.0
+					double newweight = ((Random_Float() - 0.5) * 2) * 3.0; //used to be 10.0
 
 					//Create the new gene
 					//newgene = Gene_Init_Trait(genome->traits->data[trait_num], newweight, sensor, output, false, curinnov, newweight);
@@ -1365,6 +1365,8 @@ genome_t *Genome_Mate_Multipoint(genome_t *genome, genome_t *other, int genomeid
 
 		gene_t* checkedgene = 0;
 		for (int j = 0; j < newgenes->count; j++) {
+			checkedgene = newgenes->data[j];
+
 			//Check if they either share the same node IDs, or if their inputs and outputs are recursive and link between each other.
 			if ((checkedgene->link->inode->node_id == chosengene->link->inode->node_id &&
 				checkedgene->link->onode->node_id == chosengene->link->onode->node_id &&
@@ -1574,6 +1576,8 @@ genome_t *Genome_Mate_Multipoint_Avg(genome_t *genome, genome_t *other, int geno
 
 		gene_t* checkedgene = 0;
 		for (int j = 0; j < newgenes->count; j++) {
+			checkedgene = newgenes->data[j];
+
 			//Check if they either share the same node IDs, or if their inputs and outputs are recursive and link between each other.
 			if ((checkedgene->link->inode->node_id == chosengene->link->inode->node_id &&
 				checkedgene->link->onode->node_id == chosengene->link->onode->node_id &&
@@ -1676,7 +1680,7 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 	//iterators for moving through the two parents' genes
 	neuron_t *inode;  //NNodes connected to the chosen Gene
 	neuron_t *onode;
-	int nodetraitnum;  //Trait number for a NNode
+	//int nodetraitnum;  //Trait number for a NNode
 
 	//First, average the Traits from the 2 parents to form the baby's Traits
 	//It is assumed that trait lists are the same length
@@ -1795,6 +1799,8 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 
 		gene_t* checkedgene = 0;
 		for (int j = 0; j < newgenes->count; j++) {
+			checkedgene = newgenes->data[j];
+
 			//Check if they either share the same node IDs, or if their inputs and outputs are recursive and link between each other.
 			if ((checkedgene->link->inode->node_id == chosengene->link->inode->node_id &&
 				checkedgene->link->onode->node_id == chosengene->link->onode->node_id &&

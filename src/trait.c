@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "neural.h"
 #include "environment.h"
 #include "neural_def.h"
+#include <stdlib.h>
 
 trait_t* Trait_Init()
 {
@@ -87,7 +88,7 @@ void Trait_Mutate(trait_t* trait)
 	{
 		if (Random_Float() > NQ_TRAIT_PARAM_MUT_PROB) 
 		{			
-			trait->params[i] += (Random_Float() * Random_Sign()) * NQ_TRAIT_MUT_POWER;
+			trait->params[i] += ((Random_Float() - 0.5) * 2) * NQ_TRAIT_MUT_POWER;
 			if (trait->params[i]<0.0) trait->params[i] = 0;
 			if (trait->params[i]>1.0) trait->params[i] = 1.0;
 		}

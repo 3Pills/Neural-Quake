@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __NEURAL_H__
 #define __NEURAL_H__
 
-#include <stdlib.h>
 #include "vector.h"
 #include "quakedef.h"
 #include "network.h"
@@ -40,9 +39,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 void Neural_Init();
 
 // Neural network is reloaded.
-//   Called whenever the client has finished transitioning to a new level, 
+//   Ran whenever the client has finished transitioning to a new level, 
 //   or reloaded the current one. Anything that should reinitialize at
 //   the start of a new genome run should do it here.
+//   Called in the CL_ParseServerInfo function within cl_parse.c, 
+//   after the client has received information on a server level transition.
 void Neural_Reload();
 
 // Neural network input gathering and layer processing stage.
@@ -52,11 +53,12 @@ void Neural_Reload();
 void CL_NeuralThink(double frametime);
 
 // Neural network output stage. Game is issued inputs here.
-//   Any input sent from the client to the engine should be,
-//   called here through use of the Cmd_ExecuteString command.
+//   Any input sent from the client to the engine should 
+//   be either be added into the cmd variable or called 
+//   here through use of the Cmd_ExecuteString command.
 //   Called in the CL_SendCmd function within cl_main.c, right
 //   before client commands are processed.
-void CL_NeuralMove();
+void CL_NeuralMove(usercmd_t *cmd);
 
 // Neural network 3D rendering stage. 
 //   All debug world rendering should be done here, to visually 
@@ -77,12 +79,8 @@ void SCR_DrawNeuralData();
 // These functions are called during evolution, and should not
 // be called outside of the neural network space.
 
-void NQ_Test();
-void NQ_Evaluate(organism_t *org);
-int NQ_Epoch(population_t *pop, int generation, int *winnernum, int *winnergenes, int *winnernodes);
-
-void NQ_InitializePool();
-void NQ_InitializeRun();
+//
+void NQ_Evaluate();
 void NQ_NextOrganism();
 void NQ_Timeout();
 void NQ_GetInputs();
@@ -117,10 +115,7 @@ double Random_Gauss();
 int Random_Int(int x, int y);
 
 // Returns a random decimal float between 0 and 1.
-int Random_Float();
-
-// Returns either 1 or -1 randomly.
-int Random_Sign();
+float Random_Float();
 
 // Quicksort helper function for arrays. 
 // args: first - First index to sort from.
@@ -132,11 +127,11 @@ void Quicksort(int first, int last, void* array, cbool(*sort_func)(void*, void*)
 
 // Sorting function to be passed into Quicksort function.
 //   Sorts an array of values in ascending order.
-cbool Quicksort_Ascending(double x, double y);
+cbool Quicksort_Ascending(double *x, double *y);
 
 // Sorting function to be passed into Quicksort function.
 //   Sorts an array of values in descending order.
-cbool Quicksort_Descending(double x, double y);
+cbool Quicksort_Descending(double *x, double *y);
 
 void TraceCopy(trace_t *a, trace_t *b);
 

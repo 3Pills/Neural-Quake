@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "neuron.h"
 #include "neural_def.h"
+#include <stdlib.h>
 
 neuron_t* Neuron_Init(enum nodetype_e type, int node_id)
 {

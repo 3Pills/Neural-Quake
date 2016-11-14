@@ -20,8 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "gene.h"
 #include "neuron.h"
 #include "link.h"
-#include "stdlib.h"
 #include "neural_def.h"
+#include <stdlib.h>
 
 gene_t* Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum) 
 {
@@ -59,7 +59,6 @@ gene_t* Gene_Init_Dupe(gene_t *g, neuron_t *inode, neuron_t *onode)
 	gene->innovation_num = g->innovation_num;
 	gene->mutation_num = g->mutation_num;
 	gene->enabled = g->enabled;
-
 	gene->frozen = g->frozen;
 
 	return gene;
