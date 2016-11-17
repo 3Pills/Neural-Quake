@@ -131,6 +131,9 @@ void Draw_NeuralGraph();
 // neural graph to match that of the organism argument.
 void UI_RefreshGraph(organism_t *organism);
 
+// Getter function to determine whether the neural network is active.
+cbool NQ_IsEnabled();
+
 // This is a sigmoidal activation function, which is an S-shaped squashing function
 // It smoothly limits the amplitude of the output of a neuron to between 0 and 1
 // It is a helper to the neural-activation function get_active_out

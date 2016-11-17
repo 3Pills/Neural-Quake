@@ -834,18 +834,24 @@ void CL_SendCmd (void)
 
 	if (cls.signon == SIGNONS)
 	{
-		//stephenkoren: allow the neural network to input button commands.
-		CL_NeuralMove (&cmd);
+		//stephenkoren: allow the neural network to input button commands exclusively.
+		if (NQ_IsEnabled())
+		{
+			CL_NeuralMove(&cmd);
+		}
 
-	// get basic movement from keyboard
-		CL_BaseMove (&cmd);
-
-	// allow mice or other external controllers to add to the move
-		Input_Move (&cmd);
+		// get basic movement from keyboard
+		CL_BaseMove(&cmd);
+		
+		//stephenkoren: disable mouse input if network is active.
+		if (!NQ_IsEnabled())
+		{
+			// allow mice or other external controllers to add to the move
+			Input_Move(&cmd);
+		}
 
 		// send the unreliable message
-		CL_SendMove (&cmd);
-
+		CL_SendMove(&cmd);
 	}
 
 	if (cls.demoplayback)

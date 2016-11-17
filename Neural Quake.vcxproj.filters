@@ -341,9 +341,6 @@
     <ClInclude Include="src\mark_v_lmp.h">
       <Filter>Source Files\Misc</Filter>
     </ClInclude>
-    <ClInclude Include="src\menu.h">
-      <Filter>Source Files\UI</Filter>
-    </ClInclude>
     <ClInclude Include="src\sbar.h">
       <Filter>Source Files\UI</Filter>
     </ClInclude>
@@ -472,6 +469,9 @@
     </ClInclude>
     <ClInclude Include="src\r_neural.h">
       <Filter>Source Files\Neural AI\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="src\menu.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

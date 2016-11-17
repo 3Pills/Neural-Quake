@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "innovation.h"
+#include <stdlib.h>
 
 innovation_t* Innovation_Init(int nin, int nout, double num1, double num2, int newid, double oldinnov) {
 	innovation_t* innovation = malloc(sizeof(innovation_t));
