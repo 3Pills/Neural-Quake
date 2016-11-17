@@ -43,8 +43,8 @@ neuron_t* Neuron_Init(enum nodetype_e type, int node_id)
 	//neuron->trait = 0;
 	//neuron->trait_id = 1;
 	neuron->override = false;
-	neuron->links_in = vector_init();
-	neuron->links_out = vector_init();
+	neuron->ilinks = vector_init();
+	neuron->olinks = vector_init();
 
 	return neuron;
 }
@@ -71,8 +71,8 @@ neuron_t* Neuron_Init_Placement(enum nodetype_e type, int node_id, enum nodeplac
 	//neuron->trait = 0;
 	//neuron->trait_id = 1;
 	neuron->override = false;
-	neuron->links_in = vector_init();
-	neuron->links_out = vector_init();
+	neuron->ilinks = vector_init();
+	neuron->olinks = vector_init();
 
 	return neuron;
 }
@@ -100,8 +100,8 @@ neuron_t* Neuron_Init_Derived(neuron_t* other)
 	//neuron->trait = trait;
 	//neuron->trait_id = (trait != 0) ? trait->id : 1;
 	neuron->override = false;
-	neuron->links_in = vector_init();
-	neuron->links_out = vector_init();
+	neuron->ilinks = vector_init();
+	neuron->olinks = vector_init();
 
 	return neuron;
 }
@@ -129,8 +129,8 @@ neuron_t* Neuron_Init_Copy(neuron_t* other)
 	//neuron->trait				= other->trait;
 	//neuron->trait_id			= other->trait_id;
 	neuron->override			= other->override;
-	neuron->links_in			= vector_init();
-	neuron->links_out			= vector_init();
+	neuron->ilinks				= vector_init();
+	neuron->olinks				= vector_init();
 
 	return neuron;
 }
@@ -147,9 +147,9 @@ double Neuron_Get_Active_Out_TD(neuron_t* node)
 
 void Neuron_Delete(neuron_t* node)
 {
-	for (int i = 0; i < node->links_in->count; i++)
+	for (int i = 0; i < node->ilinks->count; i++)
 	{
-		Link_Delete(node->links_in);
+		Link_Delete(node->ilinks->data[i]);
 	}
 	//Trait_Delete(node->trait);
 	free(node);
@@ -173,15 +173,15 @@ cbool Neuron_Sensor_Load(neuron_t* node, double value)
 void Neuron_Add_Incoming_Recurring(neuron_t* node, neuron_t* other, double w, cbool recur)
 {
 	nlink_t* newlink = Link_Init(w, other, node, recur);
-	vector_add(node->links_in, newlink);
-	vector_add(other->links_out, newlink);
+	vector_add(node->ilinks, newlink);
+	vector_add(other->olinks, newlink);
 }
 
 void Neuron_Add_Incoming(neuron_t* node, neuron_t* other, double w)
 {
 	nlink_t* newlink = Link_Init(w, other, node, false);
-	vector_add(node->links_in, newlink);
-	vector_add(other->links_out, newlink);
+	vector_add(node->ilinks, newlink);
+	vector_add(other->olinks, newlink);
 }
 
 
@@ -197,9 +197,9 @@ void Neuron_Flushback(neuron_t* node)
 			node->last_activation2 = 0;
 		}
 
-		for (int i = 0; i < node->links_in->count; i++)
+		for (int i = 0; i < node->ilinks->count; i++)
 		{
-			nlink_t* curlink = node->links_in->data[i];
+			nlink_t* curlink = node->ilinks->data[i];
 			curlink->added_weight = 0;
 			if (curlink->inode->activation_count > 0)
 				Neuron_Flushback(curlink->inode);
@@ -235,10 +235,10 @@ void Neuron_Flushback_Check(neuron_t* node, vector* seenlist)
 
 	if (!(node->type == NQ_SENSOR)) {
 
-		for (int i = 0; i < node->links_in->count; i++)
+		for (int i = 0; i < node->ilinks->count; i++)
 		{
 			neuron_t* location = 0;
-			nlink_t* curlink = node->links_in->data[i];
+			nlink_t* curlink = node->ilinks->data[i];
 			for (int j = 0; j < seenlist->count; j++)
 			{
 				if (seenlist->data[j] == curlink->inode)
@@ -297,9 +297,9 @@ int Neuron_Depth(neuron_t* node, int d, network_t* net)
 
 	int max = d;
 
-	for (int i = 0; i < node->links_in->count; i++)
+	for (int i = 0; i < node->ilinks->count; i++)
 	{
-		nlink_t* curlink = node->links_in->data[i];
+		nlink_t* curlink = node->ilinks->data[i];
 		int cur_depth = Neuron_Depth(curlink->inode, d + 1, net);
 		if (cur_depth > max) max = cur_depth;
 	}

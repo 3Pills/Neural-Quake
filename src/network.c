@@ -143,7 +143,7 @@ void Network_Destroy(network_t* network)
 
 void Network_Destroy_Helper(network_t* network, neuron_t *curnode, vector* seenlist)
 {
-	vector* innodes = curnode->links_in;
+	vector* innodes = curnode->ilinks;
 
 	if (!((curnode->type) == NQ_SENSOR)) {
 		for (int i = 0; i < innodes->count; i++)
@@ -233,10 +233,10 @@ cbool Network_Activate(network_t* network)
 				curnode->active_flag = false;
 
 				// For each incoming connection, add the activity from the connection to the activesum 
-				for (int j = 0; j < curnode->links_in->count; j++)
+				for (int j = 0; j < curnode->ilinks->count; j++)
 				{
 					double add_amount = 0.0;
-					nlink_t* curlink = curnode->links_in->data[j];
+					nlink_t* curlink = curnode->ilinks->data[j];
 
 					//Handle possible time delays
 					if (!curlink->time_delay)
@@ -273,30 +273,30 @@ cbool Network_Activate(network_t* network)
 		onetime = true;
 	}
 
-	if (network->adaptable)
-	{
-		for (int i = 0; i < network->all_nodes->count; i++)
-		{
-			neuron_t* curnode = network->all_nodes->data[i];
+	//if (network->adaptable)
+	//{
+	//	for (int i = 0; i < network->all_nodes->count; i++)
+	//	{
+	//		neuron_t* curnode = network->all_nodes->data[i];
 
-			if (curnode->type != NQ_SENSOR)
-			{
-				for (int j = 0; j < curnode->links_in->count; j++)
-				{
-					nlink_t* curlink = curnode->links_in->data[j];
+	//		if (curnode->type != NQ_SENSOR)
+	//		{
+	//			for (int j = 0; j < curnode->ilinks->count; j++)
+	//			{
+	//				nlink_t* curlink = curnode->ilinks->data[j];
 
-					//if (curlink->trait_id == 2 ||
-					//	curlink->trait_id == 3 ||
-					//	curlink->trait_id == 4)
-					//{
-					//	curlink->weight = Hebbian(curlink->weight, network->maxweight,
-					//		(curlink->recurrent) ? Neuron_Get_Active_Out_TD(curlink->inode) : Neuron_Get_Active_Out(curlink->inode),
-					//		Neuron_Get_Active_Out(curlink->onode), 0, 0, 0);
-					//}
-				}
-			}
-		}
-	}
+	//				if (curlink->trait_id == 2 ||
+	//					curlink->trait_id == 3 ||
+	//					curlink->trait_id == 4)
+	//				{
+	//					curlink->weight = Hebbian(curlink->weight, network->maxweight,
+	//						(curlink->recurrent) ? Neuron_Get_Active_Out_TD(curlink->inode) : Neuron_Get_Active_Out(curlink->inode),
+	//						Neuron_Get_Active_Out(curlink->onode), 0, 0, 0);
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
 	return true;
 }
 
@@ -388,9 +388,9 @@ void Network_Node_Count_Helper(network_t* network, neuron_t *curnode, int *count
 {
 	if (curnode->type != NQ_SENSOR)
 	{
-		for (int i = 0; i < curnode->links_in->count; i++)
+		for (int i = 0; i < curnode->ilinks->count; i++)
 		{
-			nlink_t *curlink = curnode->links_in->data[i];
+			nlink_t *curlink = curnode->ilinks->data[i];
 			neuron_t *location = 0;
 			for (int j = 0; j < seenlist->count; j++)
 			{
@@ -439,10 +439,10 @@ void Network_Link_Count_Helper(network_t* network, neuron_t *curnode, int *count
 	{
 		vector_add(seenlist, curnode);
 
-		for (int i = 0; i < curnode->links_in->count; i++)
+		for (int i = 0; i < curnode->ilinks->count; i++)
 		{
 			counter++;
-			Network_Link_Count_Helper(network, ((nlink_t*)curnode->links_in->data[i])->inode, counter, seenlist);
+			Network_Link_Count_Helper(network, ((nlink_t*)curnode->ilinks->data[i])->inode, counter, seenlist);
 		}
 	}
 }
@@ -456,9 +456,9 @@ cbool Network_Is_Recur(network_t* network, neuron_t *potin_node, neuron_t *potou
 	if (*count > thresh) return false;
 	if (potin_node == potout_node) return true;
 
-	for (int i = 0; i < potin_node->links_in->count; i++)
+	for (int i = 0; i < potin_node->ilinks->count; i++)
 	{
-		nlink_t* curlink = potin_node->links_in->data[i];
+		nlink_t* curlink = potin_node->ilinks->data[i];
 		if (curlink->recurrent)
 			if (Network_Is_Recur(network, curlink->inode, potout_node, count, thresh))
 				return true;

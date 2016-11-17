@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "population.h"
 #include "neural_def.h"
 #include <stdlib.h>
+#include "neural.h"
 
 population_t *Population_Init(genome_t *g, int size)
 {
@@ -580,12 +581,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 	}
 
 	//Remove the innovations of the current generation
-	for (int i = 0; i < pop->innovations->count; i++)
-	{
-		vector_delete(pop->innovations, i);
-		free(pop->innovations->data[i]);
-		i--;
-	}
+	vector_free(pop->innovations);
 
 	return true;
 }

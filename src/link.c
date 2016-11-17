@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "link.h"
 #include "neural_def.h"
+#include <stdlib.h>
 
 nlink_t* Link_Init(double w, neuron_t* inode, neuron_t* onode, cbool recurring)
 {

@@ -248,7 +248,7 @@ genome_t* Genome_Init_Copy(genome_t* other)
 // This special constructor creates a Genome with random connectivity. 
 // The last input is a bias.
 // Linkprob is the probability of a link.
-genome_t* Genome_Init_Structure(int new_id, int input_count, int output_count, int hidden_count, int hidden_max, cbool recurrent, double linkprob)
+genome_t* Genome_Init_Structure(int new_id, int num_in, int num_out, int num_hidden, int hidden_max, cbool recurrent, double linkprob)
 {
 	genome_t* genome = malloc(sizeof(genome_t));
 	if (genome == 0) return ((void*)1);
@@ -258,7 +258,7 @@ genome_t* Genome_Init_Structure(int new_id, int input_count, int output_count, i
 	genome->neurons = vector_init();
 	genome->genes = vector_init();
 
-	int totalnodes = input_count + output_count + hidden_max;
+	int totalnodes = num_in + num_out + hidden_max;
 	
 	int matrixdim = totalnodes*totalnodes;
 	int count;
@@ -269,9 +269,9 @@ genome_t* Genome_Init_Structure(int new_id, int input_count, int output_count, i
 
 	cbool *cm = malloc(sizeof(cbool) * matrixdim);  //Dimension the connection matrix
 	cbool *cmp; //Connection matrix pointer
-	maxnode = input_count + hidden_count;
+	maxnode = num_in + num_hidden;
 
-	first_output = totalnodes - output_count + 1;
+	first_output = totalnodes - num_out + 1;
 
 	//For creating the new genes
 	//trait_t *newtrait;
@@ -294,9 +294,9 @@ genome_t* Genome_Init_Structure(int new_id, int input_count, int output_count, i
 	//vector_add(genome->traits, newtrait);
 
 	//Build the input nodes
-	for (int i = 1; i <= i; i++)
+	for (int i = 0; i < num_in; i++)
 	{
-		neuron_t *newnode = Neuron_Init_Placement(NQ_SENSOR, i, (i < input_count) ? NQ_INPUT : NQ_BIAS);
+		neuron_t *newnode = Neuron_Init_Placement(NQ_SENSOR, i, (i < num_in) ? NQ_INPUT : NQ_BIAS);
 		//newnode->trait = newtrait;
 
 		//Add the node to the list of nodes
@@ -304,15 +304,15 @@ genome_t* Genome_Init_Structure(int new_id, int input_count, int output_count, i
 	}
 
 	//Build the hidden nodes
-	for (int i = 1; i <= i; i++)
+	for (int i = num_in; i < num_in + num_hidden; i++)
 	{
-		neuron_t *newnode = Neuron_Init_Placement(NQ_NEURON, i, NQ_HIDDEN);
+		neuron_t *newnode = Neuron_Init(NQ_NEURON, i);
 		//newnode->trait = newtrait;
 		vector_add(genome->neurons, newnode);
 	}
 
 	//Build the output nodes
-	for (int i = 1; i <= i; i++)
+	for (int i = first_output; i < totalnodes; i++)
 	{
 		neuron_t *newnode = Neuron_Init_Placement(NQ_NEURON, i, NQ_OUTPUT);
 		//newnode->trait = newtrait;
@@ -322,12 +322,12 @@ genome_t* Genome_Init_Structure(int new_id, int input_count, int output_count, i
 	//Step through the connection matrix, creating connection genes
 	cmp = cm;
 	count = 0;
-	for (int col = 1; col <= totalnodes; col++)
+	for (int col = 0; col <= totalnodes; col++)
 	{
-		for (int row = 1; row <= totalnodes; row++)
+		for (int row = 0; row <= totalnodes; row++)
 		{
 			//Only try to create a link if it is in the matrix and not leading into a sensor.
-			if ((*cmp == true) && (col > input_count) &&
+			if ((*cmp == true) && (col > num_in) &&
 				((col <= maxnode) || (col >= first_output)) &&
 				((row <= maxnode) || (row >= first_output))) {
 				//If it isn't recurrent, create the connection no matter what
@@ -409,14 +409,11 @@ genome_t* Genome_Init_Auto(int num_in, int num_out, int num_hidden, int type)
 	if (genome == 0) return ((void*)1);
 
 	genome->ID = 0;
-	//genome->traits = vector_init();
 	genome->neurons = vector_init();
 	genome->genes = vector_init();
 
 	//Temporary lists of nodes
-	vector *inputs = vector_init();
-	vector *outputs = vector_init();
-	vector *hidden = vector_init();
+	vector *inputs = vector_init(), *outputs = vector_init(), *hidden = vector_init();
 	neuron_t *bias; //Remember the bias
 
 	//For creating the new genes
@@ -438,40 +435,37 @@ genome_t* Genome_Init_Auto(int num_in, int num_out, int num_hidden, int type)
 	//Create the inputs and outputs
 
 	//Build the input nodes
-	for (int i = 1; i <= num_in; i++) {
-		if (i < num_in)
-		{
-			newnode = Neuron_Init_Placement(NQ_SENSOR, i, NQ_INPUT);
-		}
-		else
-		{
-			newnode = Neuron_Init_Placement(NQ_SENSOR, i, NQ_BIAS);
-			bias = newnode;
-		}
-
-		//newnode->nodetrait=newtrait;
+	for (int i = 0; i < num_in; i++) {
+		newnode = Neuron_Init_Placement(NQ_SENSOR, i, NQ_INPUT);
 
 		//Add the node to the list of nodes
 		vector_add(genome->neurons, newnode);
 		vector_add(inputs, newnode);
 	}
 
-	//Build the hidden nodes
-	for (int i = num_in + 1; i <= num_in + num_hidden; i++) {
-		newnode = Neuron_Init_Placement(NQ_NEURON, i, NQ_HIDDEN);
-		//newnode->nodetrait=newtrait;
-		//Add the node to the list of nodes
-		vector_add(genome->neurons, newnode);
-		vector_add(hidden, newnode);
-	}
-
 	//Build the output nodes
-	for (int i = num_in + num_hidden + 1; i <= num_in + num_hidden + num_out; i++) {
+	for (int i = num_in; i < num_in + num_out; i++) {
 		newnode = Neuron_Init_Placement(NQ_NEURON, i, NQ_OUTPUT);
 		//newnode->nodetrait=newtrait;
 		//Add the node to the list of nodes
 		vector_add(genome->neurons, newnode);
 		vector_add(outputs, newnode);
+	}
+
+	//Add input bias
+	newnode = Neuron_Init_Placement(NQ_SENSOR, num_in + num_out, NQ_BIAS);
+	bias = newnode;
+
+	vector_add(genome->neurons, newnode);
+	vector_add(outputs, newnode);
+
+	//Build the hidden nodes
+	for (int i = num_in + num_out + 1; i <= num_in + num_out + num_hidden; i++) {
+		newnode = Neuron_Init(NQ_NEURON, i);
+		//newnode->nodetrait=newtrait;
+		//Add the node to the list of nodes
+		vector_add(genome->neurons, newnode);
+		vector_add(hidden, newnode);
 	}
 
 	//Create the links depending on the type
@@ -600,14 +594,15 @@ network_t *Genome_Genesis(genome_t *genome, int id)
 
 	//Create the nodes
 	for (int i = 0; i < genome->neurons->count; ++i) {
-		neuron_t* curnode = (neuron_t*)genome->neurons->data[i];
+		neuron_t* curnode = genome->neurons->data[i];
 
-		newnode = Neuron_Init(curnode->type, curnode->node_id);
+		newnode = Neuron_Init_Derived(curnode);
 
 		//Derive the node parameters from the trait pointed to
 		//Neuron_Derive_Trait(curnode);
 
 		//Check for input or output designation of node
+
 		if (curnode->node_label == NQ_INPUT)  vector_add(inlist, newnode);
 		if (curnode->node_label == NQ_BIAS)   vector_add(inlist, newnode);
 		if (curnode->node_label == NQ_OUTPUT) vector_add(outlist, newnode);
@@ -621,8 +616,8 @@ network_t *Genome_Genesis(genome_t *genome, int id)
 
 	//Create the links by iterating through the genes
 	for (int i = 0; i < genome->genes->count; ++i) {
-		gene_t* curgene = (gene_t*)genome->genes->data[i];
-		//Only create the link if the gene is enabled
+		gene_t* curgene = genome->genes->data[i];
+		//Only create the link if Fthe gene is enabled
 		if (curgene->enabled == true) {
 			curlink = curgene->link;
 			inode = curlink->inode->analogue;
@@ -631,8 +626,8 @@ network_t *Genome_Genesis(genome_t *genome, int id)
 			// (no need to in the current implementation of NEAT)
 			newlink = Link_Init(curlink->weight, inode, onode, curlink->recurrent);
 
-			vector_add(onode->links_in, newlink);
-			vector_add(inode->links_out, newlink);
+			vector_add(onode->ilinks, newlink);
+			vector_add(inode->olinks, newlink);
 
 			//Derive link's parameters from its Trait pointer
 			//curtrait = curlink->trait;
@@ -640,11 +635,8 @@ network_t *Genome_Genesis(genome_t *genome, int id)
 			//Link_Derive_Trait(newlink, curtrait);
 
 			//Keep track of maximum weight
-			if (newlink->weight>0)
-				weight_mag = newlink->weight;
-			else weight_mag = -newlink->weight;
-			if (weight_mag>maxweight)
-				maxweight = weight_mag;
+			weight_mag = fabs(newlink->weight);
+			if (weight_mag > maxweight) maxweight = weight_mag;
 		}
 	}
 
@@ -981,7 +973,7 @@ cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, d
 
 			//Create the new NNode
 			//By convention, it will point to the first trait
-			newnode = Neuron_Init_Placement(NQ_NEURON, curnode_id++, NQ_HIDDEN);
+			newnode = Neuron_Init(NQ_NEURON, curnode_id++);
 			//newnode->trait = genome->traits->data[0];
 
 			//Create the new Genes
@@ -1007,7 +999,7 @@ cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, d
 				//trait_t *traitptr = link->trait;
 
 				//Create the new NNode
-				newnode = Neuron_Init_Placement(NQ_NEURON, innovation->new_node_id, NQ_HIDDEN);
+				newnode = Neuron_Init(NQ_NEURON, innovation->new_node_id);
 				//By convention, it will point to the first trait
 				//Note: In future may want to change this
 				//newnode->trait = genome->traits->data[0];
@@ -1025,7 +1017,9 @@ cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, d
 	//genes.push_back(newgene2);
 	Genome_Add_Gene(genome, genome->genes, newgene1);  //Add genes in correct order
 	Genome_Add_Gene(genome, genome->genes, newgene2);
-	Genome_Node_Insert(genome, genome->neurons, newnode);
+
+	vector_insert(genome->neurons, newnode->node_id, newnode);
+	//Genome_Node_Insert(genome, genome->neurons, newnode);
 
 	return true;
 }
@@ -1274,14 +1268,7 @@ genome_t *Genome_Mate_Multipoint(genome_t *genome, genome_t *other, int genomeid
 	vector *newnodes = vector_init(), *newgenes = vector_init();
 
 	//iterators for moving through the two parents' genes
-	neuron_t *inode;  //NNodes connected to the chosen Gene
-	neuron_t *onode;
-
-	//First, average the Traits from the 2 parents to form the baby's Traits
-	//It is assumed that trait lists are the same length
-	//In the future, may decide on a different method for trait mating
-	//for (int i = 0; i < genome->traits->count; i++)
-	//	vector_add(newtraits, Trait_Init_Merge(genome->traits->data[i], other->traits->data[i]));
+	neuron_t *inode, *onode;
 
 	//Figure out which genome is better
 	//The worse genome should not be allowed to add extra structural baggage
@@ -1350,19 +1337,8 @@ genome_t *Genome_Mate_Multipoint(genome_t *genome, genome_t *other, int genomeid
 				if (p1better) skip = true;
 			}
 		}
-		/*
-		//Uncomment this line to let growth go faster (from both parents excesses)
-		skip=false;
 
-		//For interspecies mating, allow all genes through:
-		if (interspec_flag)
-		skip=false;
-		*/
-
-
-		//Check to see if the chosengene conflicts with an already chosen gene
-		//i.e. do they represent the same link    
-
+		// Check to see if the chosengene conflicts with an already chosen gene; Do they represent the same link?
 		gene_t* checkedgene = 0;
 		for (int j = 0; j < newgenes->count; j++) {
 			checkedgene = newgenes->data[j];
@@ -1387,66 +1363,73 @@ genome_t *Genome_Mate_Multipoint(genome_t *genome, genome_t *other, int genomeid
 			neuron_t *new_inode = 0;
 			neuron_t *new_onode = 0;
 
-			//int trait_num = 0;
-			//Get the trait pointer.
-			//if (chosengene->link->trait == 0)
-			//	trait_num = ((trait_t*)genome->traits->data[0])->id - 1;
-			//else //The subtracted number normalizes depending on whether traits start counting at 1 or 0
-			//	trait_num = chosengene->link->trait->id - ((trait_t*)genome->traits->data[0])->id;
-
 			//Next check for the nodes, add them if not in the baby Genome already
+			inode = chosengene->link->inode;
+			onode = chosengene->link->onode;
 
-			//Swap the inode and onode depending on which will come first in the genome.s
-			if (chosengene->link->inode->node_id < chosengene->link->onode->node_id)
+			if (inode->node_id < onode->node_id)
 			{
-				inode = chosengene->link->inode;
-				onode = chosengene->link->onode;
-			}
-			else
-			{
-				onode = chosengene->link->inode;
-				inode = chosengene->link->onode;
-			}
-			//Checking for inode's existence
-			neuron_t* curnode = 0;
-			for (int j = 0; j < newnodes->count; j++)
-			{
-				if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+				//Checking for inode's existence
+				neuron_t* curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+						curnode = newnodes->data[j];
+
+				if (curnode == 0)
 				{
-					curnode = newnodes->data[j];
-					break;
+					new_inode = Neuron_Init_Derived(inode);
+					Genome_Node_Insert(genome, newnodes, new_inode);
 				}
-			}
+				else
+					new_inode = curnode;
 
-			if (curnode == 0) 
-			{
-				//nodetraitnum = (inode->trait) ? inode->trait->id - (((trait_t*)genome->traits->data[0])->id) : 0;
-				//Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(inode, newtraits->data[nodetraitnum]));
-				Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(inode));
-			}
-			else new_inode = curnode;
+				//Getting onode this time.
+				curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+						curnode = newnodes->data[j];
 
-			//Getting onode this time.
-			for (int j = 0; j < newnodes->count; j++)
-			{
-				if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+				if (curnode == 0)
 				{
-					curnode = newnodes->data[j];
-					break;
+					new_onode = Neuron_Init_Derived(onode);
+					Genome_Node_Insert(genome, newnodes, new_onode);
 				}
+				else new_onode = curnode;
+			}
+			else // If our onode has a higher ID we want to add it first.
+			{
+				//Checking for onode's existence
+				neuron_t* curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+						curnode = newnodes->data[j];
+
+				if (curnode == 0)
+				{
+					new_onode = Neuron_Init_Derived(onode);
+					Genome_Node_Insert(genome, newnodes, new_onode);
+				}
+				else new_onode = curnode;
+
+
+				//Getting inode this time.
+				curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+						curnode = newnodes->data[j];
+
+				if (curnode == 0)
+				{
+					new_inode = Neuron_Init_Derived(inode);
+					Genome_Node_Insert(genome, newnodes, new_inode);
+				}
+				else
+					new_inode = curnode;
 			}
 
-			if (curnode == 0)
-			{
-				//nodetraitnum = (onode->trait) ? onode->trait->id - (((trait_t*)genome->traits->data[0])->id) : 0;
-				//Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(onode, newtraits->data[nodetraitnum]));
-				Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(onode));
-			}
-			else new_onode = curnode;
 
 
 			//Add the Gene
-			//gene_t* newgene = Gene_Init_Dupe(chosengene, newtraits->data[trait_num], new_inode, new_onode);
 			gene_t* newgene = Gene_Init_Dupe(chosengene, new_inode, new_onode);
 			if (disable) {
 				newgene->enabled = false;
@@ -1606,55 +1589,68 @@ genome_t *Genome_Mate_Multipoint_Avg(genome_t *genome, genome_t *other, int geno
 			//	trait_num = chosengene->link->trait->id - ((trait_t*)genome->traits->data[0])->id;
 
 			//Next check for the nodes, add them if not in the baby Genome already
+			inode = chosengene->link->inode;
+			onode = chosengene->link->onode;
 
-			//Swap the inode and onode depending on which will come first in the genome.s
-			if (chosengene->link->inode->node_id < chosengene->link->onode->node_id)
+			if (inode->node_id < onode->node_id)
 			{
-				inode = chosengene->link->inode;
-				onode = chosengene->link->onode;
-			}
-			else
-			{
-				onode = chosengene->link->inode;
-				inode = chosengene->link->onode;
-			}
-			//Checking for inode's existence
-			neuron_t* curnode = 0;
-			for (int j = 0; j < newnodes->count; j++)
-			{
-				if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+				//Checking for inode's existence
+				neuron_t* curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+						curnode = newnodes->data[j];
+
+				if (curnode == 0)
 				{
-					curnode = newnodes->data[j];
-					break;
+					new_inode = Neuron_Init_Derived(inode);
+					Genome_Node_Insert(genome, newnodes, new_inode);
 				}
-			}
+				else
+					new_inode = curnode;
 
-			if (curnode == 0)
-			{
-				//nodetraitnum = (inode->trait) ? inode->trait->id - (((trait_t*)genome->traits->data[0])->id) : 0;
-				//Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(inode, newtraits->data[nodetraitnum]));
-				Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(inode));
-			}
-			else new_inode = curnode;
+				//Getting onode this time.
+				curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+						curnode = newnodes->data[j];
 
-			//Getting onode this time.
-			for (int j = 0; j < newnodes->count; j++)
-			{
-				if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+				if (curnode == 0)
 				{
-					curnode = newnodes->data[j];
-					break;
+					new_onode = Neuron_Init_Derived(onode);
+					Genome_Node_Insert(genome, newnodes, new_onode);
 				}
+				else new_onode = curnode;
 			}
-
-			if (curnode == 0)
+			else // If our onode has a higher ID we want to add it first.
 			{
-				//nodetraitnum = (onode->trait) ? onode->trait->id - (((trait_t*)genome->traits->data[0])->id) : 0;
-				//Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(onode, newtraits->data[nodetraitnum]));
-				Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(onode));
-			}
-			else new_onode = curnode;
+				//Checking for onode's existence
+				neuron_t* curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+						curnode = newnodes->data[j];
 
+				if (curnode == 0)
+				{
+					new_onode = Neuron_Init_Derived(onode);
+					Genome_Node_Insert(genome, newnodes, new_onode);
+				}
+				else new_onode = curnode;
+
+
+				//Getting inode this time.
+				curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+						curnode = newnodes->data[j];
+
+				if (curnode == 0)
+				{
+					new_inode = Neuron_Init_Derived(inode);
+					Genome_Node_Insert(genome, newnodes, new_inode);
+				}
+				else
+					new_inode = curnode;
+			}
 
 			//Add the Gene
 			gene_t* newgene = Gene_Init_Dupe(chosengene, new_inode, new_onode);
@@ -1678,8 +1674,7 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 	vector *newnodes = vector_init(), *newgenes = vector_init();
 
 	//iterators for moving through the two parents' genes
-	neuron_t *inode;  //NNodes connected to the chosen Gene
-	neuron_t *onode;
+	neuron_t *inode, *onode;
 	//int nodetraitnum;  //Trait number for a NNode
 
 	//First, average the Traits from the 2 parents to form the baby's Traits
@@ -1784,15 +1779,6 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 				skip = true;
 			}
 		}
-		/*
-		//Uncomment this line to let growth go faster (from both parents excesses)
-		skip=false;
-
-		//For interspecies mating, allow all genes through:
-		if (interspec_flag)
-		skip=false;
-		*/
-
 
 		//Check to see if the chosengene conflicts with an already chosen gene
 		//i.e. do they represent the same link    
@@ -1803,11 +1789,11 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 
 			//Check if they either share the same node IDs, or if their inputs and outputs are recursive and link between each other.
 			if ((checkedgene->link->inode->node_id == chosengene->link->inode->node_id &&
-				checkedgene->link->onode->node_id == chosengene->link->onode->node_id &&
-				checkedgene->link->recurrent == chosengene->link->recurrent) ||
+				 checkedgene->link->onode->node_id == chosengene->link->onode->node_id &&
+				 checkedgene->link->recurrent == chosengene->link->recurrent) ||
 				(checkedgene->link->inode->node_id == chosengene->link->onode->node_id &&
-				checkedgene->link->onode->node_id == chosengene->link->inode->node_id &&
-				checkedgene->link->recurrent && chosengene->link->recurrent))
+				 checkedgene->link->onode->node_id == chosengene->link->inode->node_id &&
+				 checkedgene->link->recurrent && chosengene->link->recurrent))
 			{
 				skip = true;
 				break;
@@ -1830,53 +1816,68 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 
 			//Next check for the nodes, add them if not in the baby Genome already
 
-			//Swap the inode and onode depending on which will come first in the genome.
-			if (chosengene->link->inode->node_id < chosengene->link->onode->node_id)
+			inode = chosengene->link->inode;
+			onode = chosengene->link->onode;
+
+			if (inode->node_id < onode->node_id)
 			{
-				inode = chosengene->link->inode;
-				onode = chosengene->link->onode;
-			}
-			else
-			{
-				onode = chosengene->link->inode;
-				inode = chosengene->link->onode;
-			}
-			//Checking for inode's existence
-			neuron_t* curnode = 0;
-			for (int j = 0; j < newnodes->count; j++)
-			{
-				if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+				//Checking for inode's existence
+				neuron_t* curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+						curnode = newnodes->data[j];
+
+				if (curnode == 0)
 				{
-					curnode = newnodes->data[j];
-					break;
+					new_inode = Neuron_Init_Derived(inode);
+					Genome_Node_Insert(genome, newnodes, new_inode);
 				}
-			}
+				else 
+					new_inode = curnode;
 
-			if (curnode == 0)
-			{
-				//nodetraitnum = (inode->trait) ? inode->trait->id - (((trait_t*)genome->traits->data[0])->id) : 0;
-				//Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(inode, newtraits->data[nodetraitnum]));
-				Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(inode));
-			}
-			else new_inode = curnode;
+				//Getting onode this time.
+				curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+						curnode = newnodes->data[j];
 
-			//Getting onode this time.
-			for (int j = 0; j < newnodes->count; j++)
-			{
-				if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+				if (curnode == 0)
 				{
-					curnode = newnodes->data[j];
-					break;
+					new_onode = Neuron_Init_Derived(onode);
+					Genome_Node_Insert(genome, newnodes, new_onode);
 				}
+				else new_onode = curnode;
 			}
-
-			if (curnode == 0)
+			else // If our onode has a higher ID we want to add it first.
 			{
-				//nodetraitnum = (onode->trait) ? onode->trait->id - (((trait_t*)genome->traits->data[0])->id) : 0;
-				//Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(onode, newtraits->data[nodetraitnum]));
-				Genome_Node_Insert(genome, newnodes, Neuron_Init_Derived(onode));
+				//Checking for onode's existence
+				neuron_t* curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+						curnode = newnodes->data[j];
+
+				if (curnode == 0)
+				{
+					new_onode = Neuron_Init_Derived(onode);
+					Genome_Node_Insert(genome, newnodes, new_onode);
+				}
+				else new_onode = curnode; 
+
+
+				//Getting inode this time.
+				curnode = 0;
+				for (int j = 0; j < newnodes->count && curnode == 0; j++)
+					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+						curnode = newnodes->data[j];
+
+				if (curnode == 0)
+				{
+					new_inode = Neuron_Init_Derived(inode);
+					Genome_Node_Insert(genome, newnodes, new_inode);
+				}
+				else
+					new_inode = curnode;			
 			}
-			else new_onode = curnode;
 
 
 			//Add the Gene

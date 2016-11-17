@@ -33,18 +33,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // These functions are called from within the engine, and
 // allow a means of interfacing between the game and the network.
 
-// Neural network data is initialized.
+// Neural network commands are created within the engine.
 //   Called as part of the engine's startup functions. Anything that 
 //   should run as soon as the game boots should be run within this function.
-void Neural_Init();
+void NQ_Init();
 
-// Neural network is reloaded.
+// Neural network is reloaded, resetting all variables.
 //   Ran whenever the client has finished transitioning to a new level, 
 //   or reloaded the current one. Anything that should reinitialize at
 //   the start of a new genome run should do it here.
 //   Called in the CL_ParseServerInfo function within cl_parse.c, 
 //   after the client has received information on a server level transition.
-void Neural_Reload();
+void NQ_Reload();
 
 // Neural network input gathering and layer processing stage.
 //   Called in the CL_UpdateClient function within cl_main.c
@@ -75,34 +75,73 @@ void R_DrawNeuralData();
 //   the console, the FPS counter, any download bars or any menus.
 void SCR_DrawNeuralData();
 
-// ***** EVOLUTION FUNCTIONS ******
-// These functions are called during evolution, and should not
-// be called outside of the neural network space.
+// ***** COMMAND FUNCTIONS ******
+// These functions are defined within cmd_list_sheet.h as functions for
+// use within the game's console. They allow various functionality within
+// the network to be called at will by the player.
 
-//
-void NQ_Evaluate();
-void NQ_NextOrganism();
-void NQ_Timeout();
+// Neural network data is initialized and the network begins execution.
+// Usage is nq_start <filename if loading>.
+void NQ_Start(lparse_t *line);
+
+// Ends execution of the network.
+// Usage is nq_start <filename if saving>.
+void NQ_End(lparse_t *line);
+
+// Saves the current data of the network to a file for later use.
+// Usage is nq_save <filename> [0 - continue executing | 1 - end execution].
+void NQ_Save(lparse_t *line);
+
+// Loads neural data from a file and begins executing it. 
+// Usage is nq_load <filename>.
+void NQ_Load(lparse_t *line);
+
+// Forces the network to move on to the next organism.
+// To be called if an organism gets stuck in a loop during execution.
+void NQ_ForceTimeout();
+
+// ***** NETWORK FUNCTIONS ******
+// These helper functions are called during runtime, and contain 
+// various functions called to process data within the network.
+// Should not be called outside of the neural network space.
+
+// Retrives information from the world for use within the neural network.
 void NQ_GetInputs();
+
+// Evaluates an organism within the neural network against the current input.
+void NQ_Evaluate(organism_t* organism);
+
+// Iterates to the next organism within the network
+void NQ_NextOrganism();
+
+// Resets the state of the neural network to prepare for the next evaluation.
+void NQ_Timeout();
 
 // ***** MATHS / UTILITY FUNCTIONS ******
 
-// This is a signmoidal activation function, which is an S-shaped squashing function
+// Draw various stats related to the current genome within a
+// graph in the bottom left of the screen.
+void Draw_NeuralStats();
+
+// Draw the layout of the neural network in a graph 
+// at the top right of the screen.
+void Draw_NeuralGraph();
+
+// Refreshes the hidden node data and node link data within the 
+// neural graph to match that of the organism argument.
+void UI_RefreshGraph(organism_t *organism);
+
+// This is a sigmoidal activation function, which is an S-shaped squashing function
 // It smoothly limits the amplitude of the output of a neuron to between 0 and 1
 // It is a helper to the neural-activation function get_active_out
-// It is made inline so it can execute quickly since it is at every non-sensor 
-// node in a network.
 double Sigmoid(double x); 
 
 // Hebbian Adaptation Function
 // Based on equations in Floreano & Urzelai 2000
 // Takes the current weight, the maximum weight in the containing network,
-// the activation coming in and out of the synapse,
-// and three learning rates for hebbian, presynaptic, and postsynaptic
-// modification
+// the activation coming in and out of the synapse, and three learning rates 
+// for hebbian, presynaptic, and postsynaptic modification
 // Returns the new modified weight
-// NOTE: For an inhibatory connection, it makes sense to
-//      emphasize decorrelation on hebbian learning!
 double Hebbian(double weight, double maxweight, double active_in, 
 			   double active_out, double hebb_rate, double pre_rate, 
 			   double post_rate);
@@ -124,7 +163,6 @@ float Random_Float();
 //		 sort_func - A function returning a cbool which compares two pointer objects.
 void Quicksort(int first, int last, void* array, cbool(*sort_func)(void*, void*));
 
-
 // Sorting function to be passed into Quicksort function.
 //   Sorts an array of values in ascending order.
 cbool Quicksort_Ascending(double *x, double *y);
@@ -133,8 +171,7 @@ cbool Quicksort_Ascending(double *x, double *y);
 //   Sorts an array of values in descending order.
 cbool Quicksort_Descending(double *x, double *y);
 
+// Helper function that copies the values from trace a to trace b.
 void TraceCopy(trace_t *a, trace_t *b);
-
-//#endif
 
 #endif // !__NEURAL_H__

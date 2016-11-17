@@ -61,8 +61,8 @@ typedef struct neuron_s
 	cbool override; // The NNode cannot compute its own output- something is overriding it
 	double override_value; // Contains the activation value that will override this node's activation
 
-	vector* links_out; // Contains: nlink_t. Vector array of outgoing Links.
-	vector* links_in; // Contains: nlink_t. Vector array of incoming Links.
+	vector* olinks; // Contains: nlink_t. Vector array of outgoing Links.
+	vector* ilinks; // Contains: nlink_t. Vector array of incoming Links.
 
 	int value; // The Value output by the Neuron.
 
@@ -76,12 +76,6 @@ typedef struct neuron_s
 	cbool active_flag; // To make sure outputs are active
 
 	//double params[NQ_TRAIT_NUM_PARAMS];
-
-	vector* rowLevels; // Contains: double. Depth from output where this node appears.
-
-	int row;
-	int ypos;
-	int xpos;
 
 	int node_id; // Identification for file output
 	enum nodeplace_e node_label;

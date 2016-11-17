@@ -366,16 +366,16 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 			else {
 				//If we didn't do a structural mutation, we do the other kinds
 
-				if (Random_Float() < NQ_MUTATE_RAND_TRAIT_PROB)
-					Genome_Mutate_Random_Trait(new_genome);
-				if (Random_Float() < NQ_MUTATE_LINK_TRAIT_PROB)
-					Genome_Mutate_Link_Trait(new_genome, 1);
-				if (Random_Float() < NQ_MUTATE_NODE_TRAIT_PROB)
-					Genome_Mutate_Node_Trait(new_genome, 1);
+				//if (Random_Float() < NQ_MUTATE_RAND_TRAIT_PROB)
+				//	Genome_Mutate_Random_Trait(new_genome);
+				//if (Random_Float() < NQ_MUTATE_LINK_TRAIT_PROB)
+				//	Genome_Mutate_Link_Trait(new_genome, 1);
+				//if (Random_Float() < NQ_MUTATE_NODE_TRAIT_PROB)
+				//	Genome_Mutate_Node_Trait(new_genome, 1);
 				if (Random_Float() < NQ_MUTATE_LINK_WEIGHTS_PROB)
 					Genome_Mutate_Link_Weights(new_genome, mut_power, 1.0, NQ_GAUSSIAN);
 				if (Random_Float() < NQ_MUTATE_TOGGLE_ENABLE_PROB)
-					Genome_Mutate_Toggle_Enable(new_genome, 1);
+					Genome_Mutate_Toggle_Enable(new_genome, 20);
 				if (Random_Float() < NQ_MUTATE_GENE_REENABLE_PROB)
 					Genome_Mutate_Gene_Reenable(new_genome);
 			}
@@ -433,11 +433,11 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 			}
 			
 			//Perform mating based on probabilities of differrent mating types
-			if (Random_Float() < NQ_MATE_MULTIPOINT_PROB)
-				new_genome = Genome_Mate_Multipoint(mom->gnome, dad->gnome, i, mom->orig_fitness, dad->orig_fitness, outside);
-			else if (Random_Float() < NQ_MATE_MULTIPOINT_AVG_PROB / (NQ_MATE_MULTIPOINT_AVG_PROB + NQ_MATE_SINGLEPOINT_PROB))
-				new_genome = Genome_Mate_Multipoint_Avg(mom->gnome, dad->gnome, i, mom->orig_fitness, dad->orig_fitness, outside);
-			else
+			//if (Random_Float() < NQ_MATE_MULTIPOINT_PROB)
+			//	new_genome = Genome_Mate_Multipoint(mom->gnome, dad->gnome, i, mom->orig_fitness, dad->orig_fitness, outside);
+			//else if (Random_Float() < NQ_MATE_MULTIPOINT_AVG_PROB / (NQ_MATE_MULTIPOINT_AVG_PROB + NQ_MATE_SINGLEPOINT_PROB))
+			//	new_genome = Genome_Mate_Multipoint_Avg(mom->gnome, dad->gnome, i, mom->orig_fitness, dad->orig_fitness, outside);
+			//else
 				new_genome = Genome_Mate_Singlepoint(mom->gnome, dad->gnome, i);
 
 			mate_baby = true;
@@ -465,12 +465,12 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 				}
 				else {
 					//Only do other mutations when not doing sturctural mutations
-					if (Random_Float() < NQ_MUTATE_RAND_TRAIT_PROB)
-						Genome_Mutate_Random_Trait(new_genome);
-					if (Random_Float() < NQ_MUTATE_LINK_TRAIT_PROB)
-						Genome_Mutate_Link_Trait(new_genome, 1);
-					if (Random_Float() < NQ_MUTATE_NODE_TRAIT_PROB)
-						Genome_Mutate_Node_Trait(new_genome, 1);
+					//if (Random_Float() < NQ_MUTATE_RAND_TRAIT_PROB)
+					//	Genome_Mutate_Random_Trait(new_genome);
+					//if (Random_Float() < NQ_MUTATE_LINK_TRAIT_PROB)
+					//	Genome_Mutate_Link_Trait(new_genome, 1);
+					//if (Random_Float() < NQ_MUTATE_NODE_TRAIT_PROB)
+					//	Genome_Mutate_Node_Trait(new_genome, 1);
 					if (Random_Float() < NQ_MUTATE_LINK_WEIGHTS_PROB)
 						Genome_Mutate_Link_Weights(new_genome, mut_power, 1.0, NQ_GAUSSIAN);
 					if (Random_Float() < NQ_MUTATE_TOGGLE_ENABLE_PROB)

@@ -40,13 +40,14 @@ void Draw_Square(int x, int y, int w, int h, float thickness, int c, int alpha)
 	eglEnable(GL_TEXTURE_2D);
 }
 #elif defined(GLQUAKE)
-void Draw_Line(int x1, int y1, int x2, int y2, float thickness, int c, int alpha)
+void Draw_Line(int x1, int y1, int x2, int y2, float thickness, int c, float alpha)
 {
 	byte *pal = (byte *)vid.d_8to24table;
 
 	eglDisable(GL_TEXTURE_2D);
-	eglDisable(GL_ALPHA_TEST);
-	eglEnable(GL_BLEND);
+	eglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	eglEnable(GL_BLEND); 
+	eglDisable(GL_ALPHA_TEST); 
 	eglColor4f(pal[c * 4] / 255.0, pal[c * 4 + 1] / 255.0, pal[c * 4 + 2] / 255.0, alpha);
 
 	eglLineWidth(thickness);
@@ -56,18 +57,19 @@ void Draw_Line(int x1, int y1, int x2, int y2, float thickness, int c, int alpha
 	eglEnd();
 
 	eglColor3f(1, 1, 1);
-	eglDisable(GL_BLEND);
 	eglEnable(GL_ALPHA_TEST);
+	eglDisable(GL_BLEND); 
 	eglEnable(GL_TEXTURE_2D);
 }
 
-void Draw_Square(int x, int y, int w, int h, float thickness, int c, int alpha)
+void Draw_Square(int x, int y, int w, int h, float thickness, int c, float alpha)
 {
 	byte *pal = (byte *)vid.d_8to24table;
 
 	eglDisable(GL_TEXTURE_2D);
 	eglDisable(GL_ALPHA_TEST);
 	eglEnable(GL_BLEND);
+	eglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	eglColor4f(pal[c * 4] / 255.0, pal[c * 4 + 1] / 255.0, pal[c * 4 + 2] / 255.0, alpha);
 
 	eglLineWidth(thickness);
@@ -78,7 +80,6 @@ void Draw_Square(int x, int y, int w, int h, float thickness, int c, int alpha)
 	eglVertex2f(x, y + h);
 	eglEnd();
 
-	eglColor3f(1, 1, 1);
 	eglDisable(GL_BLEND);
 	eglEnable(GL_ALPHA_TEST);
 	eglEnable(GL_TEXTURE_2D);

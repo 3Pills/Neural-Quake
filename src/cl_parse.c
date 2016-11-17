@@ -451,7 +451,7 @@ void CL_ParseServerInfo (void)
 	memset(&dev_peakstats, 0, sizeof(dev_peakstats));
 	memset(&dev_overflows, 0, sizeof(dev_overflows));
 
-	Neural_Reload ();
+	NQ_Reload ();
 }
 
 /*
