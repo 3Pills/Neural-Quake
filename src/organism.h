@@ -74,4 +74,6 @@ cbool Organism_Order_Orgs(organism_t *x, organism_t *y);
 
 cbool Organism_Order_Orgs_By_Adjusted_Fit(organism_t *x, organism_t *y);
 
+cbool Organism_FPrint(organism_t* organism, FILE* f);
+
 #endif // !__ORGANISM_H__

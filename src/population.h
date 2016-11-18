@@ -61,6 +61,9 @@ population_t *Population_Init_No_Mutation(genome_t *g, int size, float power);
 // Construct off of a vector of genomes with a mutation rate of "power"
 population_t *Population_Init_From_List(vector *genomeList, float power);
 
+// Construct from file data.
+population_t *Population_Init_Load(char* filename);
+
 // Deconstructor
 void Population_Delete(population_t *pop);
 
@@ -85,5 +88,8 @@ cbool Population_Epoch(population_t *pop, int generation);
 
 // Places the organisms in species in order from best to worst fitness 
 cbool Population_Rank_Within_Species(population_t *pop);
+
+// Prints population to file, by species.
+cbool Population_FPrint(population_t* pop, FILE* f);
 
 #endif //!__POPULATION_H__

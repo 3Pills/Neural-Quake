@@ -531,14 +531,45 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 	return true;
 }
 
-cbool Species_Order_By_Fitness(organism_t *x, organism_t *y) {
+cbool Species_Order_By_Fitness(organism_t *x, organism_t *y) 
+{
 	return (x->fitness >= y->fitness);
 }
 
-cbool Species_Order_By_Fitness_Orig(species_t *x, species_t *y) {
+cbool Species_Order_By_Fitness_Orig(species_t *x, species_t *y) 
+{
 	return (((organism_t*)x->organisms->data[0])->orig_fitness >= ((organism_t*)y->organisms->data[0])->orig_fitness);
 }
 
-cbool Species_Order_By_Fitness_Max(species_t *x, species_t *y) {
+cbool Species_Order_By_Fitness_Max(species_t *x, species_t *y) 
+{
 	return (x->max_fitness >= y->max_fitness);
+}
+
+cbool Species_FPrint(species_t* species, FILE* f)
+{
+
+	//Print a comment on the Species info
+	fprintf(f, "/* Species #%d : (Size %d) (AF %f) (Age %d)  */\n\n", species->id, species->organisms->count, species->average_est, species->age);
+
+	//Show user what's going on
+	Con_Printf("/* Species #%d : (Size %d) (AF %f) (Age %d)  */\n\n", species->id, species->organisms->count, species->average_est, species->age);
+
+	//Print all the Organisms' Genomes to the outFile
+	for (int i = 0; i < species->organisms->count; i++) 
+	{
+		organism_t *curorg = species->organisms->data[i];
+		//Put the fitness for each organism in a comment
+		Organism_FPrint(curorg, f);
+
+		//If it is a winner, mark it in a comment
+		if (curorg->winner) fprintf(f, "/* ##------$ WINNER %d SPECIES #%d $------## */\n", curorg->gnome->ID, species->id);
+
+		Genome_FPrint(curorg->gnome, f);
+		//We can confirm by writing the genome #'s to the screen
+		//std::cout<<((*curorg)->gnome)->genome_id<<std::endl;
+	}
+	fprintf(f, "\n\n");
+
+	return true;
 }

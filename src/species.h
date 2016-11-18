@@ -87,6 +87,6 @@ double Species_Compute_Average_Fitness(species_t *species);
 // track of remaining fractional parts of offspring and distributing them among species.
 double Species_Count_Offspring(species_t *species, double skim);
 
-
+cbool Species_FPrint(species_t* species, FILE* f);
 
 #endif // !__SPECIES_H__

@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "neuron.h"
+#include "quakedef.h"
 #include "neural_def.h"
 #include <stdlib.h>
 
@@ -133,6 +134,40 @@ neuron_t* Neuron_Init_Copy(neuron_t* other)
 	neuron->olinks				= vector_init();
 
 	return neuron;
+}
+
+neuron_t* Neuron_Init_Load(char *argline)
+{
+	char *curword;
+	int args[3] = { -1, -1, -1 }; // Args: ID, Type, Placement.
+
+	// Read the line into memory.
+	curword = strtok(argline, " ");
+
+	// n denotes node information, and should always be present as the first word.
+	if (curword != "n")
+	{
+		Con_Printf("Erroneus argline passed to node [%s]!", argline);
+		return 0;
+	}
+
+	for (int i = 0; i < 3; i++)
+	{
+		// Read the next word.
+		curword = strtok(NULL, " ");
+
+		// Error handling.
+		if (curword == NULL)
+		{
+			Con_Printf("Error loading neuron #%s!", args[1]);
+			return 0;
+		}
+		// Convert each argument to its decimal equivalent.
+		sscanf(curword, "%d", &args[i]);
+	}
+
+	// We can just pass these value into the other constructor now.
+	return Neuron_Init_Placement(args[1], args[0], args[2]);
 }
 
 double Neuron_Get_Active_Out(neuron_t* node)
@@ -305,4 +340,9 @@ int Neuron_Depth(neuron_t* node, int d, network_t* net)
 	}
 
 	return max;
+}
+
+void Neuron_FPrint(neuron_t *node, FILE *f)
+{
+	fprintf(f, "n %d %d %d\n", node->node_id, node->type, node->node_label);
 }

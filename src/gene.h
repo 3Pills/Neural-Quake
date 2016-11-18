@@ -62,12 +62,12 @@ gene_t* Gene_Init_Dupe(gene_t *g, trait_t *tp, neuron_t *inode, neuron_t *onode)
 gene_t* Gene_Init_Copy(gene_t* g);
 
 // Construct a gene from a file spec given traits and nodes.
-gene_t* Gene_Init_File(const char *argline, vector *traits, vector *nodes);
+gene_t* Gene_Init_Load(char *argline, vector *nodes);
 
 // Delete a gene
 void Gene_Delete(gene_t* gene);
 
-// Print gene to a file. Called from Genome.
-void Gene_Print(FILE *outFile);
+// Print gene data to a file. Called from Genome_FPrint.
+void Gene_FPrint(gene_t* gene, FILE *f);
 
 #endif // !__GENE_H__

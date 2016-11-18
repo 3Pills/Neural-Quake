@@ -54,9 +54,9 @@ genome_t* Genome_Init_Links(int id, vector* nodes, vector* links);
 // Copy constructor
 genome_t* Genome_Init_Copy(genome_t* other);
 
-//Special constructor which spawns off an input file
-//This constructor assumes that some routine has already read in GENOMESTART
-// Genome_Init_File(int id, std::ifstream &iFile);
+// Constructor which spawns off an input file
+// Called from Population_Init_Load.
+genome_t* Genome_Init_Load(int id, FILE *f);
 
 // This special constructor creates a Genome
 // with i inputs + 1 bias input, o outputs, 
@@ -188,6 +188,7 @@ void Genome_Node_Insert(genome_t *genome, vector *nlist, neuron_t *n);
 //*correct order* into the list of genes in the genome
 void Genome_Add_Gene(genome_t *genome, vector *glist, gene_t *g);
 
-//void print_Genome_tofile(genome_t *g, const char *filename);
+// Print genome to a file.
+void Genome_FPrint(genome_t* gene, FILE *f);
 
 #endif // !__GENOME_H__

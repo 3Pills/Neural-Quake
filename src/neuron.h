@@ -88,8 +88,9 @@ neuron_t* Neuron_Init_Placement(enum nodetype_e type, int node_id, enum nodeplac
 // Construct a node using another as a base, for genome purposes.
 neuron_t* Neuron_Init_Derived(neuron_t* other);
 
-// Construct a node using another as a base, for genome purposes.
-//neuron_t* Neuron_Init_Derived(neuron_t* other, trait_t* trait);
+// Construct a node from a line of arguments loaded from a file.
+// Called from Genome_Init_Load.
+neuron_t* Neuron_Init_Load(char *argline);
 
 // Copy constructor.
 neuron_t* Neuron_Init_Copy(neuron_t* other);
@@ -129,5 +130,8 @@ void Neuron_Activate_Override(neuron_t* node);
 
 //Find the greatest depth starting from this neuron at depth d
 int Neuron_Depth(neuron_t* node, int d, network_t* net);
+
+// Print neuron to file. Called from Genome_FPrint.
+void Neuron_FPrint(neuron_t* node, FILE *f);
 
 #endif // !__NEURON_H__

@@ -226,13 +226,18 @@ void SCR_DrawNeuralData()
 	if (neuralgraph.value) Draw_NeuralGraph();
 }
 
-void NQ_Start()
+void NQ_Start(lparse_t *line)
 {
 	Con_Printf("\nNeural population initialization\n");
 
-	Con_Printf("  Spawning Population\n");
-	genome_t *start_genome = Genome_Init_Auto(NQ_INPUT_COUNT, NQ_OUTPUT_COUNT, 0, 0);
-	population = Population_Init(start_genome, NQ_POP_SIZE);
+	genome_t *start_genome = 0;
+
+	if (population == 0)
+	{
+		Con_Printf("  Spawning Population\n");
+		start_genome = Genome_Init_Auto(NQ_INPUT_COUNT, NQ_OUTPUT_COUNT, 0, 0);
+		population = Population_Init(start_genome, NQ_POP_SIZE);
+	}
 
 	Con_Printf("  Verifying Spawned Population\n");
 	Population_Verify(population);
@@ -401,10 +406,40 @@ void NQ_Start()
 	network_on = true;
 }
 
-void NQ_End()
+void NQ_End(lparse_t *line)
 {
 	network_on = false;
 }
+
+void NQ_Save(lparse_t *line)
+{
+	if (line->count != 2)
+	{
+		printf("nq_save [filename] : saves a file containing neural data.");
+		return;
+	}
+
+	char filename[128];
+	strcat(filename, line->args[1]);
+	strcat(filename, ".txt");
+
+	FILE *f = fopen(filename, "w");
+	Population_FPrint(population, f);
+}
+
+// Loads neural data from a file and begins executing it. 
+// Usage is nq_load <filename>.
+void NQ_Load(lparse_t *line)
+{
+	if (line->count != 2)
+	{
+		printf("nq_load [filename] : loads a file containing neural data.");
+		return;
+	}
+
+	Population_Init_Load(line->args[1]);
+}
+
 
 void NQ_GetInputs()
 {
@@ -726,8 +761,11 @@ void Draw_NeuralStats()
 		organism_t *organism = species->organisms->data[currOrganism];
 		if (organism != 0)
 		{
+			// Get stats from the population to enter into the graph.
+			int bestSpeciesID = 0; // The best species in the population.
+			int bestOrgID = 0; // The champion organism in the population.
+			double bestOrgTime = 0.0; // The longest time an organism has lived.
 
-			int bestSpeciesID, bestOrgID = 0;
 			species_t* bestSpecies = 0;
 			for (int i = 0; i < population->species->count; i++)
 			{
@@ -739,10 +777,16 @@ void Draw_NeuralStats()
 					bestSpeciesID = species->id;
 				}
 			}
-
 			for (int i = 0; i < population->organisms->count; i++)
-				if (((organism_t*)population->organisms->data[i])->champion)
-					bestOrgID = i;
+			{
+				organism_t *curOrg = population->organisms->data[i];
+				if (curOrg->champion) bestOrgID = i;
+
+				if (curOrg->time_alive > bestOrgTime) bestOrgTime = curOrg->time_alive;
+			}
+
+			c_snprintf2(str, "Time         |  %4i %4i", (int)organism->time_alive, (int)bestOrgTime);
+			Draw_String(x, (y++) * 8 - x, str);
 
 			c_snprintf2(str, "Fitness      |  %4i %4i", (int)organism->fitness, (int)organism->species->peak_fitness);
 			Draw_String(x, (y++) * 8 - x, str);

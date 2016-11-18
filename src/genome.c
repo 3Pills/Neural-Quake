@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 genome_t* Genome_Init(int id, vector* neurons, vector* genes)
 {
 	genome_t* genome = malloc(sizeof(genome_t));
-	if (genome == 0) return ((void*)1);
+	if (genome == 0) return NULL;
 
 	genome->ID = id;
 	//genome->traits = traits;
@@ -41,7 +41,7 @@ genome_t* Genome_Init(int id, vector* neurons, vector* genes)
 genome_t* Genome_Init_Links(int id, vector* neurons, vector* links)
 {
 	genome_t* genome = malloc(sizeof(genome_t));
-	if (genome == 0) return ((void*)1);
+	if (genome == 0) return NULL;
 
 	genome->ID = id;
 	//genome->traits = traits;
@@ -63,7 +63,7 @@ genome_t* Genome_Init_Links(int id, vector* neurons, vector* links)
 genome_t* Genome_Init_Copy(genome_t* other)
 {
 	genome_t* genome = malloc(sizeof(genome_t));
-	if (genome == 0) return ((void*)1);
+	if (genome == 0) return NULL;
 
 	genome->ID = other->ID;
 	//genome->traits = vector_init();
@@ -127,123 +127,79 @@ genome_t* Genome_Init_Copy(genome_t* other)
 	return genome;
 }
 
-//Special constructor which spawns off an input file
-//This constructor assumes that some routine has already read in GENOMESTART
-/* Genome_Init_File(int id, std::ifstream &iFile)
+genome_t* Genome_Init_Load(int id, FILE *f)
 {
-	char curword[128];  //max word size of 128 characters
+	genome_t* genome = malloc(sizeof(genome_t));
+	if (genome == 0) return NULL;
+
+	char* curword;
 	char curline[1024]; //max line size of 1024 characters
-	char delimiters[] = " \n";
 
-	int done = 0;
+	cbool done = false;
+	while (fgets(curline, sizeof(curline), f) && !done)
+	{
+		char lineCopy[1024];
+		strcpy(lineCopy, curline);
 
-	//int pause;
+		curword = strtok(lineCopy, " ");
+		
+		// Genome end reached. 
+		if (strcmp(curword, "gnome_e") == 0)
+		{
+			// Load the ID.
+			curword = strtok(NULL, " ");
 
-	genome_id = id;
+			int idcheck;
+			sscanf(curword, "%d", &idcheck);
 
-	iFile.getline(curline, sizeof(curline));
-	int wordcount = NEAT::getUnitCount(curline, delimiters);
-	int curwordnum = 0;
+			if (idcheck != genome->ID) Con_Printf("ERROR: id mismatch in genome [%d : %d]", genome->ID, idcheck);
 
-	//Loop until file is finished, parsing each line
-	while (!done) {
-
-		//std::cout << curline << std::endl;
-
-		if (curwordnum > wordcount || wordcount == 0) {
-			iFile.getline(curline, sizeof(curline));
-			wordcount = NEAT::getUnitCount(curline, delimiters);
-			curwordnum = 0;
+			// We've read the genome completely.
+			done = true;
 		}
 
-		std::stringstream ss(curline);
-		//strcpy(curword, NEAT::getUnit(curline, curwordnum++, delimiters));
-		ss >> curword;
+		//Print any comments to the console.
+		else if (strcmp(curword, "/*") == 0)
+		{
+			char metadata[128];
+			cbool md = false;
+			strcpy(metadata, "");
+			curword = strtok(NULL, " ");
+			while (strcmp(curword, "*/") != 0 && curword != NULL)
+			{
+				if (md) strncat(metadata, " ", 128 - strlen(metadata));
+				md = true;
 
-		//printf(curword);
-		//printf(" test\n");
-		//Check for end of Genome
-		if (strcmp(curword, "genomeend") == 0) {
-			//strcpy(curword, NEAT::getUnit(curline, curwordnum++, delimiters));
-			ss >> curword;
-			int idcheck = atoi(curword);
-			//iFile>>idcheck;
-			if (idcheck != genome_id) printf("ERROR: id mismatch in genome");
-			done = 1;
-		}
-
-		//Ignore genomestart if it hasn't been gobbled yet
-		else if (strcmp(curword, "genomestart") == 0) {
-			++curwordnum;
-			//cout<<"genomestart"<<endl;
-		}
-
-		//Ignore comments surrounded by - they get printed to screen
-		else if (strcmp(curword, "/*") == 0) {
-			//strcpy(curword, NEAT::getUnit(curline, curwordnum++, delimiters));
-			ss >> curword;
-			while (strcmp(curword, "*\") != 0) {
-				//cout<<curword<<" ";
-				//strcpy(curword, NEAT::getUnit(curline, curwordnum++, delimiters));
-				ss >> curword;
+				strncat(metadata, curword, 128 - strlen(metadata));
+				curword = strtok(NULL, " ");
 			}
-			//cout<<endl;
-		}
-
-		//Read in a trait
-		else if (strcmp(curword, "trait") == 0) {
-			Trait *newtrait;
-
-			char argline[1024];
-			//strcpy(argline, NEAT::getUnits(curline, curwordnum, wordcount, delimiters));
-
-			curwordnum = wordcount + 1;
-
-			ss.getline(argline, 1024);
-			//Allocate the new trait
-			newtrait = new Trait(argline);
-
-			//Add trait to vector of traits
-			traits.push_back(newtrait);
+			Con_Printf(metadata);
 		}
 
 		//Read in a node
-		else if (strcmp(curword, "node") == 0) {
-			NNode *newnode;
-
+		else if (strcmp(curword, "n") == 0)
+		{
+			// Recreate a copy of the current line to be read.
 			char argline[1024];
-			//strcpy(argline, NEAT::getUnits(curline, curwordnum, wordcount, delimiters));
-			curwordnum = wordcount + 1;
+			strcpy(argline, curline);
 
-			ss.getline(argline, 1024);
 			//Allocate the new node
-			newnode = new NNode(argline, traits);
-
-			//Add the node to the list of nodes
-			nodes.push_back(newnode);
+			vector_add(genome->neurons, Neuron_Init_Load(argline));
 		}
 
-		//Read in a Gene
-		else if (strcmp(curword, "gene") == 0) {
-			Gene *newgene;
+		//Read in a gene
+		else if (strcmp(curword, "g") == 0) {
 
 			char argline[1024];
-			//strcpy(argline, NEAT::getUnits(curline, curwordnum, wordcount, delimiters));
-			curwordnum = wordcount + 1;
-
-			ss.getline(argline, 1024);
-			//std::cout << "New gene: " << ss.str() << std::endl;
-			//Allocate the new Gene
-			newgene = new Gene(argline, traits, nodes);
+			strcpy(argline, curline);
 
 			//Add the gene to the genome
-			genes.push_back(newgene);
-
-			//std::cout<<"Added gene " << newgene << std::endl;
+			vector_add(genome->genes, Gene_Init_Load(argline, genome->neurons));
 		}
-
 	}
-}*/
+
+	return genome;
+}
 
 // This special constructor creates a Genome with random connectivity. 
 // The last input is a bias.
@@ -2010,4 +1966,17 @@ void Genome_Add_Gene(genome_t *genome, vector *glist, gene_t *g)
 		if (curgene->innovation_num >= g->innovation_num)
 			vector_insert(glist, i, g);
 	}
+}
+
+void Genome_FPrint(genome_t* genome, FILE *f)
+{
+	fprintf(f, "gnome_s\n");
+
+	for (int i = 0; i < genome->neurons->count; i++)
+		Neuron_FPrint(genome->neurons->data[i], f);
+
+	for (int i = 0; i < genome->genes->count; i++)
+		Gene_FPrint(genome->genes->data[i], f);
+
+	fprintf(f, "gnome_e\n");
 }

@@ -39,19 +39,10 @@ organism_t* Organism_Init(double fit, genome_t* g, int gen, const char* md)
 	organism->champion = false;
 	organism->super_champ_offspring = 0;
 
-	// If md is null, then we don't have metadata, otherwise we do have metadata so copy it over
-	if (md == 0) 
-	{
-		strcpy(organism->metadata, "");
-	}
-	else 
-	{
-		strncpy(organism->metadata, md, 128);
-	}
+	strncpy(organism->metadata, (md == 0) ? "" : md, 128);
 
 	organism->time_alive = 0;
 
-	//DEBUG vars
 	organism->pop_champ = false;
 	organism->pop_champ_child = false;
 	organism->high_fit = 0;
@@ -73,7 +64,6 @@ organism_t* Organism_Init_Copy(organism_t* o)
 	organism->fitness = o->fitness;
 	organism->orig_fitness = o->orig_fitness;
 	organism->gnome = Genome_Init_Copy(o->gnome); // Associative relationship
-	//gnome = o->gnome->duplicate(o->gnome->genome_id);
 	organism->net = Network_Init_Copy(o->net); // Associative relationship
 	organism->species = o->species;	// Delegation relationship
 	organism->expected_offspring = o->expected_offspring;
@@ -85,9 +75,9 @@ organism_t* Organism_Init_Copy(organism_t* o)
 	organism->super_champ_offspring = o->super_champ_offspring;
 
 	strcpy(organism->metadata, o->metadata);
-	//printf("copying %s did it work? %s", o->metadata, metadata);
 
 	organism->time_alive = o->time_alive;
+
 	organism->pop_champ = o->pop_champ;
 	organism->pop_champ_child = o->pop_champ_child;
 	organism->high_fit = o->high_fit;
@@ -124,4 +114,14 @@ cbool Organism_Order_Orgs(organism_t *x, organism_t *y)
 cbool Organism_Order_Orgs_By_Adjusted_Fit(organism_t *x, organism_t *y)
 {
 	return ((x->fitness / x->species->organisms->count) > (y->fitness / y->species->organisms->count));
+}
+
+cbool Organism_FPrint(organism_t* organism, FILE* f)
+{
+	if (organism->modified)
+		fprintf(f, "/* Organism #%d Fitness: %f Time: %d */\n", (organism->gnome)->ID, organism->fitness, organism->time_alive);
+	else
+		fprintf(f, "/* %s */\n", organism->metadata);
+
+	return true;
 }

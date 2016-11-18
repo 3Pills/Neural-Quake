@@ -21,11 +21,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "neuron.h"
 #include "link.h"
 #include "neural_def.h"
-#include <stdlib.h>
+#include "quakedef.h"
 
 gene_t* Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum) 
 {
 	gene_t* gene = malloc(sizeof(gene_t));
+	if (gene == 0) return NULL;
 
 	gene->link = Link_Init(w, in_node, out_node, recurring);
 	gene->innovation_num = innov;
@@ -41,6 +42,7 @@ gene_t* Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurri
 gene_t* Gene_Init_Trait(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum)
 {
 	gene_t* gene = malloc(sizeof(gene_t));
+	if (gene == 0) return NULL;
 
 	gene->link = Link_Init_Trait(w, in_node, out_node, recurring);
 	gene->innovation_num = innov;
@@ -54,6 +56,7 @@ gene_t* Gene_Init_Trait(double w, neuron_t* in_node, neuron_t* out_node, cbool r
 gene_t* Gene_Init_Dupe(gene_t *g, neuron_t *inode, neuron_t *onode)
 {
 	gene_t* gene = malloc(sizeof(gene_t));
+	if (gene == 0) return NULL;
 
 	gene->link = Link_Init_Trait(g->link->weight, inode, onode, g->link->recurrent);
 	gene->innovation_num = g->innovation_num;
@@ -68,6 +71,7 @@ gene_t* Gene_Init_Dupe(gene_t *g, neuron_t *inode, neuron_t *onode)
 gene_t* Gene_Init_Copy(gene_t* g)
 {
 	gene_t* gene = malloc(sizeof(gene_t));
+	if (gene == 0) return NULL;
 
 	gene->link = Link_Init_Copy(g->link);
 	gene->innovation_num	= g->innovation_num;
@@ -78,68 +82,64 @@ gene_t* Gene_Init_Copy(gene_t* g)
 	return gene;
 }
 
-
-gene_t* Gene_Init_File(const char *argline, vector *traits, vector *nodes)
+gene_t* Gene_Init_Load(char *argline, vector *nodes)
 {
-	gene_t* gene = malloc(sizeof(gene_t));
-	return gene;
-}
+	char *curword;
 
-/*
-gene_t Gene_Init(const char *argline, vector traits, vector nodes)
-{
-	gene_t gene;
+	// Args : inode_id, onode_id, weight, recurrent, innovation_num, mutation_num, enabled.
+	int args[7] = { -1, -1, -1, -1, -1, -1, -1 };
 
-	//Gene parameter holders
-	int traitnum;
-	int inodenum;
-	int onodenum;
-	neuron_t *inode;
-	neuron_t *onode;
-	double weight;
-	int recur;
-	Trait *traitptr;
+	// Read the line into memory.
+	curword = strtok(argline, " ");
 
-	std::vector<Trait*>::iterator curtrait;
-	std::vector<NNode*>::iterator curnode;
-
-	//Get the gene parameters
-
-	std::stringstream ss(argline);
-
-	ss >> traitnum >> inodenum >> onodenum >> weight >> recur >> innovation_num >> mutation_num >> enable;
-	//std::cout << traitnum << " " << inodenum << " " << onodenum << " ";
-	//std::cout << weight << " " << recur << " " << innovation_num << " ";
-	//std::cout << mutation_num << " " << enable << std::endl;
-
-	frozen = false; //TODO: MAYBE CHANGE
-
-	//Get a pointer to the trait
-	if (traitnum == 0) traitptr = 0;
-	else {
-		curtrait = traits.begin();
-		while (((*curtrait)->trait_id) != traitnum)
-			++curtrait;
-		traitptr = (*curtrait);
+	// n denotes node information, and should always be present as the first word.
+	if (curword != "n")
+	{
+		Con_Printf("Erroneus argline passed to gene [%s]!", argline);
+		return 0;
 	}
 
-	//Get a pointer to the input node
-	curnode = nodes.begin();
-	while (((*curnode)->node_id) != inodenum)
-		++curnode;
-	inode = (*curnode);
+	for (int i = 0; i < 7; i++)
+	{
+		// Read the next word.
+		curword = strtok(NULL, " ");
 
-	//Get a pointer to the output node
-	curnode = nodes.begin();
-	while (((*curnode)->node_id) != onodenum)
-		++curnode;
-	onode = (*curnode);
+		// Error handling.
+		if (curword == NULL)
+		{
+			Con_Printf("Error loading gene between node #%s and node #%s!", args[1], args[2]);
+			return 0;
+		}
 
-	lnk = new Link(traitptr, weight, inode, onode, recur);
+		// Convert each argument to its decimal equivalent.
+		sscanf(curword, "%d", &args[i]);
+	}
+
+	gene_t* gene = malloc(sizeof(gene_t));
+	if (gene == 0) return 0;
+
+	// Apply direct parameters.
+	gene->innovation_num = args[4];
+	gene->mutation_num = args[5];
+	gene->enabled = args[6];
+	gene->frozen = false;
+
+	// Find the nodes on either side of the gene, using the ids stored in the file.
+	neuron_t *inode = 0, *onode = 0;
+	for (int i = 0; i < nodes->count; i++)
+	{
+		neuron_t *curnode = nodes->data[i];
+		if (curnode->node_id == args[0]) inode = nodes->data[i];
+		if (curnode->node_id == args[1]) onode = nodes->data[i];
+
+		if (inode != 0 && onode != 0) break;
+	}
+
+	// Now we can make a link.
+	gene->link = Link_Init(args[2], inode, onode, args[3]);
 
 	return gene;
 }
-*/
 
 void Gene_Delete(gene_t* gene)
 {
@@ -147,8 +147,11 @@ void Gene_Delete(gene_t* gene)
 	free(gene);
 }
 
-// Print gene to a file. Called from Genome.
-void Gene_Print(FILE *filePointer)
+// Print gene and its link data to a file. Called from Genome.
+void Gene_FPrint(gene_t* gene, FILE *f)
 {
+	if (f == NULL) return;
 
+	fprintf(f, "g %i %i %f %i %f %f %i\n", gene->link->inode->node_id, gene->link->onode->node_id, 
+		gene->link->weight, gene->link->recurrent, gene->innovation_num, gene->mutation_num, gene->enabled);
 }

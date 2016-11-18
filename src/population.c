@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 population_t *Population_Init(genome_t *g, int size)
 {
 	population_t* pop = malloc(sizeof(population_t));
-	if (pop == 0) return ((void*)1);
+	if (pop == 0) return NULL;
 
 	pop->winnergen = 0;
 	pop->highest_fitness = 0.0;
@@ -43,7 +43,7 @@ population_t *Population_Init(genome_t *g, int size)
 population_t *Population_Init_No_Mutation(genome_t *g, int size, float power)
 {
 	population_t* pop = malloc(sizeof(population_t));
-	if (pop == 0) return ((void*)1);
+	if (pop == 0) return NULL;
 
 	pop->winnergen = 0;
 	pop->highest_fitness = 0;
@@ -61,7 +61,7 @@ population_t *Population_Init_No_Mutation(genome_t *g, int size, float power)
 population_t *Population_Init_From_List(vector *genomeList, float power)
 {
 	population_t* pop = malloc(sizeof(population_t));
-	if (pop == 0) return ((void*)1);
+	if (pop == 0) return NULL;
 
 	pop->winnergen = 0;
 	pop->highest_fitness = 0.0;
@@ -93,6 +93,77 @@ population_t *Population_Init_From_List(vector *genomeList, float power)
 	//Separate the new Population into species
 	Population_Speciate(pop);
 
+	return pop;
+}
+
+population_t *Population_Init_Load(char* filename)
+{
+	population_t* pop = malloc(sizeof(population_t));
+	if (pop == 0) return NULL;
+
+	// Initialize basic values.
+	pop->winnergen = 0;
+	pop->highest_fitness = 0.0;
+	pop->highest_last_changed = 0;
+
+	pop->cur_node_id = 0;
+	pop->cur_innov_num = 0.0;
+
+
+	char* curword;
+	char curline[1024]; //max line size of 1024 characters
+
+	cbool md = false;
+	char metadata[128];
+
+	strcat(filename, ".txt");
+	FILE *f = fopen(filename, "r");
+	if (f == NULL)
+	{
+		Con_Printf("No neural data found in %s", filename);
+		return 0;
+	}
+
+	while (fgets(curline, sizeof(curline), f))
+	{
+		char lineCopy[1024];
+		strcpy(lineCopy, curline);
+
+		curword = strtok(lineCopy, " ");
+		if (strcmp(curword, "gnome_s") == 0)
+		{
+			int idcheck = strtok(NULL, " ")[0];
+
+			// Clear metadata if we haven't gathered any.
+			if (md == false) strcpy(metadata, "");
+			md = false;
+			genome_t *new_genome = Genome_Init_Load(idcheck, f);
+			vector_add(pop->organisms, Organism_Init(0.0, new_genome, 1, metadata));
+		}
+		else if (strcmp(curword, "/*"))
+		{
+			strcpy(metadata, "");
+			curword = strtok(NULL, " ");
+			while (strcmp(curword, "*/") != 0 && curword != NULL)
+			{
+				if (md) strncat(metadata, " ", 128 - strlen(metadata));
+				strncat(metadata, curword, 128 - strlen(metadata));
+				md = true;
+				curword = strtok(NULL, " ");
+			}
+		}
+	}
+
+	if (!feof(f))
+	{
+		Con_Printf("Error loading data from %s!", filename);
+		return 0;
+	}
+
+	fclose(f);
+	Population_Speciate(pop);
+		
+	Con_Printf("Population sucessfully loaded from %s!", filename);
 	return pop;
 }
 
@@ -590,6 +661,14 @@ cbool Population_Rank_Within_Species(population_t *pop)
 {
 	for (int i = 0; i < pop->species->count; i++)
 		Species_Rank(pop->species->data[i]);
+
+	return true;
+}
+
+cbool Population_FPrint(population_t* pop, FILE* f)
+{
+	for (int i = 0; i < pop->species->count; i++)
+		Species_FPrint(pop->species->data[i], f);
 
 	return true;
 }

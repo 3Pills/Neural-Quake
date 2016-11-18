@@ -24,6 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NQ_POP_SIZE 17
 #define NQ_NUM_RUNS 1
 
+#define NQ_PRINT_AFTER 4 // Defines how often population data should be printed.
+
 #define NQ_INPUT_ROWS 9 // Total rows ray cast in the player's vision cone.
 #define NQ_INPUT_COLS 15  // Total columns ray cast in the player's vision cone.
 
