@@ -96,7 +96,7 @@ population_t *Population_Init_From_List(vector *genomeList, float power)
 	return pop;
 }
 
-population_t *Population_Init_Load(char* filename)
+population_t *Population_Init_Load(FILE* f)
 {
 	population_t* pop = malloc(sizeof(population_t));
 	if (pop == 0) return NULL;
@@ -119,54 +119,44 @@ population_t *Population_Init_Load(char* filename)
 	cbool md = false;
 	char metadata[128];
 
-	strcat(filename, ".txt");
-	FILE *f = fopen(filename, "r");
-	if (f == NULL)
-	{
-		Con_Printf("No neural data found in %s", filename);
-		return 0;
-	}
-
 	while (fgets(curline, sizeof(curline), f))
 	{
 		char lineCopy[1024];
 		strcpy(lineCopy, curline);
 
-		curword = strtok(lineCopy, " ");
-		if (strcmp(curword, "gnome_s") == 0)
+		curword = strtok(lineCopy, " \n");
+		if (curword != NULL)
 		{
-			int idcheck = strtok(NULL, " ")[0];
-
-			// Clear metadata if we haven't gathered any.
-			if (md == false) strcpy(metadata, "");
-			md = false;
-			genome_t *new_genome = Genome_Init_Load(idcheck, f);
-			vector_add(pop->organisms, Organism_Init(0.0, new_genome, 1, metadata));
-		}
-		else if (strcmp(curword, "/*") == 0)
-		{
-			strcpy(metadata, "");
-			curword = strtok(NULL, " ");
-			while (curword != NULL && strcmp(curword, "*/") != 0)
+			if (strcmp(curword, "gnome_s") == 0)
 			{
-				if (md) strncat(metadata, " ", 128 - strlen(metadata));
-				strncat(metadata, curword, 128 - strlen(metadata));
-				md = true;
+				int idcheck;
+				sscanf(strtok(NULL, " "), "%d", &idcheck);
+
+				// Clear metadata if we haven't gathered any.
+				if (md == false) strcpy(metadata, "");
+				md = false;
+				genome_t *new_genome = Genome_Init_Load(idcheck, f);
+				if (new_genome == 0)
+				{
+					Con_Printf("Error creating genome #%d!\n", idcheck);
+					return pop;
+				}
+				vector_add(pop->organisms, Organism_Init(0.0, new_genome, 1, metadata));
+			}
+			else if (strcmp(curword, "/*") == 0)
+			{
+				strcpy(metadata, "");
 				curword = strtok(NULL, " ");
+				while (curword != NULL && strcmp(curword, "*/") != 0)
+				{
+					if (md) strncat(metadata, " ", 128 - strlen(metadata));
+					strncat(metadata, curword, 128 - strlen(metadata));
+					md = true;
+					curword = strtok(NULL, " ");
+				}
 			}
 		}
 	}
-
-	if (!feof(f))
-	{
-		Con_Printf("Error loading data from %s!", filename);
-		return 0;
-	}
-
-	fclose(f);
-	Population_Speciate(pop);
-		
-	Con_Printf("Population sucessfully loaded from %s!", filename);
 	return pop;
 }
 

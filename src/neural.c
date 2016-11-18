@@ -21,7 +21,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "r_neural.h"
+#include "vector.h"
 #include "neural_def.h"
+#include "network.h"
+#include "population.h"
+#include "organism.h"
+#include "genome.h"
+#include "species.h"
 
 // Determines whether the network should be executing or not. 
 // Set to true during NQ_Start.
@@ -240,173 +246,206 @@ void NQ_Start(lparse_t *line)
 	Con_Printf("\nNeural population initialization\n");
 
 	genome_t *start_genome = 0;
+	network_t *network = 0;
+	organism_t *organism = 0;
 
 	if (population == 0)
 	{
 		Con_Printf("  Spawning Population\n");
 		start_genome = Genome_Init_Auto(NQ_INPUT_COUNT, NQ_OUTPUT_COUNT, 0, 0);
 		population = Population_Init(start_genome, NQ_POP_SIZE);
+
+		Con_Printf("  Verifying Spawned Population\n");
+		Population_Verify(population);
+
+
+		species_t *species = population->species->data[currSpecies];
+		organism = species->organisms->data[currOrganism];
+
+		start_genome = organism->gnome;
+		network = Genome_Genesis(start_genome, population->organisms->count);
+
+		Con_Printf("  Activating Network\n");
+		Network_Activate(network);
 	}
-
-	Con_Printf("  Verifying Spawned Population\n");
-	Population_Verify(population);
-
-	network_t *network = Genome_Genesis(start_genome, population->organisms->count);
-	Con_Printf("  Activating Network\n");
-	Network_Activate(network);
-
-	Con_Printf("  Building Inputs and Outputs\n");
-
-	inputs = vector_init();
-
-	// Initialize a bunch of trace objects to store the data from input gathering in.
-	for (int i = 0; i < NQ_INPUT_COUNT; i++)
+	else
 	{
-		trace_t* trace = malloc(sizeof(trace_t));
-		trace->allsolid = false;
-		trace->startsolid = false;
-		trace->ent = 0;
-		trace->fraction = 1.0;
-		trace->inopen = false;
-		trace->inwater = false;
-		trace->plane.dist = 10;
+		species_t *species = population->species->data[currSpecies];
+		organism = species->organisms->data[currOrganism];
 
-		memset(trace->endpos, 0, 3 * sizeof(float));
-		memset(trace->plane.normal, 0, 3 * sizeof(float));
-
-		vector_add(inputs, trace);
+		start_genome = organism->gnome;
+		network = organism->net;
 	}
 
-	distStorage = vector_init();
+	if (inputs == 0 || outputs == 0)
+		Con_Printf("  Building Inputs and Outputs\n");
 
-	outputs = malloc(sizeof(outputs)*NQ_OUTPUT_COUNT);
-	memset(outputs, 0, NQ_OUTPUT_COUNT * sizeof(double*));
+	if (inputs == 0)
+	{
+		inputs = vector_init();
+
+		// Initialize a bunch of trace objects to store the data from input gathering in.
+		for (int i = 0; i < NQ_INPUT_COUNT; i++)
+		{
+			trace_t* trace = malloc(sizeof(trace_t));
+			trace->allsolid = false;
+			trace->startsolid = false;
+			trace->ent = 0;
+			trace->fraction = 1.0;
+			trace->inopen = false;
+			trace->inwater = false;
+			trace->plane.dist = 10;
+
+			memset(trace->endpos, 0, 3 * sizeof(float));
+			memset(trace->plane.normal, 0, 3 * sizeof(float));
+
+			vector_add(inputs, trace);
+		}
+	}
+
+	if (distStorage == 0)
+		distStorage = vector_init();
+	else
+		vector_clear(distStorage);
+
+	if (outputs == 0)
+	{
+		outputs = malloc(sizeof(outputs)*NQ_OUTPUT_COUNT);
+		memset(outputs, 0, NQ_OUTPUT_COUNT * sizeof(double*));
+	}
 
 	Con_Printf("   Building UI Graph Data\n");
 
-	uinodes = vector_init();
-	uinode_t *uinode = 0;
-
-	// Create input UI Nodes for the graph.
-	for (int i = 0; i < NQ_INPUT_COUNT; i++)
+	if (uinodes == 0)
 	{
-		int x = i % NQ_INPUT_COLS, y = (NQ_INPUT_ROWS - 1) - (i / NQ_INPUT_COLS);
+		uinodes = vector_init();
+		uinode_t *uinode = 0;
 
-		uinode = malloc(sizeof(uinode_t));
+		// Create input UI Nodes for the graph.
+		for (int i = 0; i < NQ_INPUT_COUNT; i++)
+		{
+			int x = i % NQ_INPUT_COLS, y = (NQ_INPUT_ROWS - 1) - (i / NQ_INPUT_COLS);
 
-		uinode->x = NQ_GRAPH_POSX + 1 + x * NQ_GRAPH_INBOX_WIDTH;
-		uinode->y = NQ_GRAPH_POSY + y * NQ_GRAPH_INBOX_HEIGHT;
-		uinode->sizex = NQ_GRAPH_INBOX_WIDTH - NQ_GRAPH_BOX_PADDING;
-		uinode->sizey = NQ_GRAPH_INBOX_HEIGHT - NQ_GRAPH_BOX_PADDING;
+			uinode = malloc(sizeof(uinode_t));
 
-		vector_add(uinodes, uinode);
-	}
+			uinode->x = NQ_GRAPH_POSX + 1 + x * NQ_GRAPH_INBOX_WIDTH;
+			uinode->y = NQ_GRAPH_POSY + y * NQ_GRAPH_INBOX_HEIGHT;
+			uinode->sizex = NQ_GRAPH_INBOX_WIDTH - NQ_GRAPH_BOX_PADDING;
+			uinode->sizey = NQ_GRAPH_INBOX_HEIGHT - NQ_GRAPH_BOX_PADDING;
+
+			vector_add(uinodes, uinode);
+		}
 
 #pragma region output_uinodes
-	// Manually Create output UI nodes for the graph.
+		// Manually Create output UI nodes for the graph.
 
-	// forward
-	uinode = malloc(sizeof(uinode_t));
-	uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE;
-	uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE * 3;
-	uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+		// forward
+		uinode = malloc(sizeof(uinode_t));
+		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE;
+		uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE * 3;
+		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
 
-	vector_add(uinodes, uinode);
+		vector_add(uinodes, uinode);
 
-	// back
-	uinode = malloc(sizeof(uinode_t));
-	uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE;
-	uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+		// back
+		uinode = malloc(sizeof(uinode_t));
+		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE;
+		uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
 
-	vector_add(uinodes, uinode);
+		vector_add(uinodes, uinode);
 
-	// moveleft
-	uinode = malloc(sizeof(uinode_t));
-	uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025;
-	uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
-	uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+		// moveleft
+		uinode = malloc(sizeof(uinode_t));
+		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025;
+		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
+		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
 
-	vector_add(uinodes, uinode);
+		vector_add(uinodes, uinode);
 
-	// moveright
-	uinode = malloc(sizeof(uinode_t));
-	uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE * 2;
-	uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
-	uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+		// moveright
+		uinode = malloc(sizeof(uinode_t));
+		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE * 2;
+		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
+		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
 
-	vector_add(uinodes, uinode);
+		vector_add(uinodes, uinode);
 
-	// left
-	uinode = malloc(sizeof(uinode_t));
-	uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 3;
-	uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
-	uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+		// left
+		uinode = malloc(sizeof(uinode_t));
+		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 3;
+		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
+		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
 
-	vector_add(uinodes, uinode);
+		vector_add(uinodes, uinode);
 
-	// right
-	uinode = malloc(sizeof(uinode_t));
-	uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE;
-	uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
-	uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+		// right
+		uinode = malloc(sizeof(uinode_t));
+		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE;
+		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
+		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
 
-	vector_add(uinodes, uinode);
+		vector_add(uinodes, uinode);
 
-	// lookup
-	uinode = malloc(sizeof(uinode_t));
-	uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 2;
-	uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE * 3;
-	uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+		// lookup
+		uinode = malloc(sizeof(uinode_t));
+		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 2;
+		uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE * 3;
+		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
 
-	vector_add(uinodes, uinode);
+		vector_add(uinodes, uinode);
 
-	// lookdown
-	uinode = malloc(sizeof(uinode_t));
-	uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 2;
-	uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+		// lookdown
+		uinode = malloc(sizeof(uinode_t));
+		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 2;
+		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
 
-	vector_add(uinodes, uinode);
+		vector_add(uinodes, uinode);
 
-	// attack
-	uinode = malloc(sizeof(uinode_t));
-	uinode->x = NQ_GRAPH_POSX + (NQ_GRAPH_WIDTH * 0.5 - NQ_GRAPH_OUTBOX_SIZE / 2) - NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING;
-	uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE - (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) / 2;
-	uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+		// attack
+		uinode = malloc(sizeof(uinode_t));
+		uinode->x = NQ_GRAPH_POSX + (NQ_GRAPH_WIDTH * 0.5 - NQ_GRAPH_OUTBOX_SIZE / 2) - NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING;
+		uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE - (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) / 2;
+		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
 
-	vector_add(uinodes, uinode);
+		vector_add(uinodes, uinode);
 
-	// jump
-	uinode = malloc(sizeof(uinode_t));
-	uinode->x = NQ_GRAPH_POSX + (NQ_GRAPH_WIDTH * 0.5 - NQ_GRAPH_OUTBOX_SIZE / 2) + NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING;
-	uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE - (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) / 2;
-	uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-	uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-	vector_add(uinodes, uinode);
+		// jump
+		uinode = malloc(sizeof(uinode_t));
+		uinode->x = NQ_GRAPH_POSX + (NQ_GRAPH_WIDTH * 0.5 - NQ_GRAPH_OUTBOX_SIZE / 2) + NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING;
+		uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE - (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) / 2;
+		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+		vector_add(uinodes, uinode);
 
 #pragma endregion
 
-	uilinks = vector_init();
 
-	// Add all extra hidden / bias nodes.
-	for (int i = NQ_INPUT_COUNT + NQ_OUTPUT_COUNT; i < network->all_nodes->count; i++)
+		// Add all extra hidden / bias nodes.
+		for (int i = NQ_INPUT_COUNT + NQ_OUTPUT_COUNT; i < network->all_nodes->count; i++)
+		{
+			uinode = malloc(sizeof(uinode_t));
+			vector_add(uinodes, uinode);
+		}
+	}
+
+	if (uilinks == 0)
 	{
-		uinode = malloc(sizeof(uinode_t));
-		vector_add(uinodes, uinode);
+		uilinks = vector_init();
 	}
 
 	// Initialize hidden / bias node positions and represent their neural links. 
-	UI_RefreshGraph(population->organisms->data[0]);
+	UI_RefreshGraph(organism);
 
 	Network_Flush(network);
 
@@ -422,6 +461,7 @@ void NQ_End(lparse_t *line)
 
 	if (line != 0 && line->count == 2)
 		NQ_Save(line);
+
 
 	// Disable all inputs on end.
 	for (int i = 0; i < NQ_OUTPUT_COUNT; i++)
@@ -446,24 +486,67 @@ void NQ_Save(lparse_t *line)
 	}
 
 	char filename[128];
-	strcat(filename, line->args[1]);
+	strcpy(filename, line->args[1]);
 	strcat(filename, ".txt");
 
 	FILE *f = fopen(filename, "w");
+	if (f == NULL)
+	{
+		Con_Printf("Unable to open %s", filename);
+		return;
+	}
+
+	fprintf(f, "%d %d %d", generation, currSpecies, currOrganism);
+
 	Population_FPrint(population, f);
+
+	fclose(f);
 }
 
 void NQ_Load(lparse_t *line)
 {
 	if (line == 0) return;
 
-	if (line->count < 2)
+	if (line->count != 2)
 	{
 		Con_Printf("nq_load [filename] : loads a file containing neural data.");
 		return;
 	}
 
-	Population_Init_Load(line->args[1]);
+	char filename[128];
+	strcpy(filename, line->args[1]);
+	strcat(filename, ".txt");
+
+	FILE *f = fopen(filename, "r");
+	if (f == NULL)
+	{
+		Con_Printf("No neural data found in %s\n", filename);
+		return;
+	}
+	
+	// Read in the global header data.
+	char curline[1024];
+	if (fgets(curline, sizeof(curline), f) != NULL)
+	{
+		char lineCopy[1024];
+		strcpy(lineCopy, curline);
+
+		sscanf(strtok(lineCopy, " \n"), "%d", &generation);
+		sscanf(strtok(NULL, " \n"), "%d", &currSpecies);
+		sscanf(strtok(NULL, " \n"), "%d", &currOrganism);
+
+		population = Population_Init_Load(f);
+	}
+
+	if (!feof(f))
+	{
+		Con_Printf("Error loading data from %s!\n", filename);
+		return;
+	}
+	fclose(f);
+
+	Population_Speciate(population);
+	Con_Printf("Population sucessfully loaded from %s!\n", filename);
 }
 
 void NQ_ForceTimeout()
@@ -748,7 +831,7 @@ void NQ_Timeout()
 	organism->time_alive = cl.time;
 
 	// Store the player's current position as the organisms final position.
-	VectorCopy(cl_entities[cl.viewentity].origin, organism->final_pos);
+	VectorCopy(cl_entities[cl.viewentity].origin, organism->gnome->final_pos);
 
 	// Add the final position of the organism to the global list.
 	vec3_t *final_pos = malloc(sizeof(vec3_t));
@@ -934,45 +1017,6 @@ void UI_RefreshGraph(organism_t *organism)
 		uinode_t *uinode = uinodes->data[i];
 		uinode->node = node;
 	}
-
-	/*
-	// Build links for bias, outputs and hidden layers.
-	for (int i = 0; i < node->ilinks->count; i++)
-	{
-		nlink_t *link = node->ilinks->data[i];
-		// Just be sure the output node is the node we're after.
-		if (link->onode == node)
-		{
-			uilink_t *uilink = malloc(sizeof(uilink_t));
-
-			uilink->start = uinodes->data[link->inode->node_id];
-			uilink->end = uinode;
-			uilink->color = link->weight > 0 ? 63 : link->weight < 0 ? 79 : 7;
-			uilink->opacity = link->inode->value == 0 ? 0.1 : 0.6;
-			uilink->link = link;
-
-			vector_add(uilinks, uilink);
-		}
-	}
-
-	for (int i = 0; i < node->olinks->count; i++)
-	{
-		nlink_t *link = node->olinks->data[i];
-		// Same check with input node of the output link.
-		if (link->inode == node)
-		{
-			uilink_t *uilink = malloc(sizeof(uilink_t));
-
-			uilink->start = uinode;
-			uilink->end = uinodes->data[link->onode->node_id];
-			uilink->color = roundf(247 + link->weight * 4);
-			uilink->opacity = link->inode->value == 0 ? 0.1 : 0.6;
-			uilink->link = link;
-
-			vector_add(uilinks, uilink);
-		}
-	}
-	*/
 
 	// Refresh all hidden layer nodes, also linking them between their inputs and outputs.
 	for (int i = NQ_INPUT_COUNT; i < organism->net->all_nodes->count; i++)

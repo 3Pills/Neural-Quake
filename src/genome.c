@@ -33,6 +33,7 @@ genome_t* Genome_Init(int id, vector* neurons, vector* genes)
 	genome->neurons = neurons;
 	genome->genes = genes;
 	genome->fitness = -1;
+	memset(genome->final_pos, 0, sizeof(float) * 3);
 
 	return genome;
 }
@@ -48,6 +49,7 @@ genome_t* Genome_Init_Links(int id, vector* neurons, vector* links)
 	genome->neurons = neurons;
 	genome->genes = vector_init();
 	genome->fitness = -1;
+	memset(genome->final_pos, 0, sizeof(float) * 3);
 
 	//We go through the links and turn them into original genes
 	for (int i = 0; i < links->count; i++) {
@@ -124,6 +126,8 @@ genome_t* Genome_Init_Copy(genome_t* other)
 		vector_add(genome->genes, newgene);
 	}
 
+	VectorCopy(other->final_pos, genome->final_pos);
+
 	return genome;
 }
 
@@ -131,6 +135,16 @@ genome_t* Genome_Init_Load(int id, FILE *f)
 {
 	genome_t* genome = malloc(sizeof(genome_t));
 	if (genome == 0) return NULL;
+
+	genome->ID = id;
+	genome->neurons = vector_init();
+	genome->genes = vector_init();
+	genome->fitness = atoi(strtok(NULL, " \n"));
+
+	vec3_t final_pos = { atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")), atoi(strtok(NULL, " \n")) };
+	genome->final_pos[0] = final_pos[0];
+	genome->final_pos[1] = final_pos[1];
+	genome->final_pos[2] = final_pos[2];
 
 	char* curword;
 	char curline[1024]; //max line size of 1024 characters
@@ -141,60 +155,69 @@ genome_t* Genome_Init_Load(int id, FILE *f)
 		char lineCopy[1024];
 		strcpy(lineCopy, curline);
 
-		curword = strtok(lineCopy, " ");
+		curword = strtok(lineCopy, " \n");
 		
-		// Genome end reached. 
-		if (strcmp(curword, "gnome_e") == 0)
+		if (curword != NULL)
 		{
-			// Load the ID.
-			curword = strtok(NULL, " ");
-
-			int idcheck;
-			sscanf(curword, "%d", &idcheck);
-
-			if (idcheck != genome->ID) Con_Printf("ERROR: id mismatch in genome [%d : %d]", genome->ID, idcheck);
-
-			// We've read the genome completely.
-			done = true;
-		}
-
-		//Print any comments to the console.
-		else if (strcmp(curword, "/*") == 0)
-		{
-			char metadata[128];
-			cbool md = false;
-			strcpy(metadata, "");
-			curword = strtok(NULL, " ");
-			while (curword != NULL && strcmp(curword, "*/") != 0)
+			// Genome end reached. 
+			if (strcmp(curword, "gnome_e") == 0)
 			{
-				if (md) strncat(metadata, " ", 128 - strlen(metadata));
-				md = true;
-
-				strncat(metadata, curword, 128 - strlen(metadata));
+				// Load the ID.
 				curword = strtok(NULL, " ");
+
+				int idcheck;
+				sscanf(curword, "%d", &idcheck);
+
+				if (idcheck != genome->ID) Con_Printf("ERROR: id mismatch in genome [%d : %d]\n", genome->ID, idcheck);
+
+				// We've read the genome completely.
+				done = true;
 			}
-			Con_Printf(metadata);
-		}
 
-		//Read in a node
-		else if (strcmp(curword, "n") == 0)
-		{
-			// Recreate a copy of the current line to be read.
-			char argline[1024];
-			strcpy(argline, curline);
+			//Print any comments to the console.
+			else if (strcmp(curword, "/*") == 0)
+			{
+				char metadata[128];
+				cbool md = false;
+				strcpy(metadata, "");
+				curword = strtok(NULL, " ");
+				while (curword != NULL && strcmp(curword, "*/") != 0)
+				{
+					if (md) strncat(metadata, " ", 128 - strlen(metadata));
+					md = true;
 
-			//Allocate the new node
-			vector_add(genome->neurons, Neuron_Init_Load(argline));
-		}
+					strncat(metadata, curword, 128 - strlen(metadata));
+					curword = strtok(NULL, " \n");
+				}
+				Con_Printf(metadata);
+			}
 
-		//Read in a gene
-		else if (strcmp(curword, "g") == 0) {
+			//Read in a node
+			else if (strcmp(curword, "n") == 0)
+			{
+				// Recreate a copy of the current line to be read.
+				char argline[1024];
+				strcpy(argline, curline);
 
-			char argline[1024];
-			strcpy(argline, curline);
+				neuron_t *node = Neuron_Init_Load(argline);
+				if (node == 0) return genome;
 
-			//Add the gene to the genome
-			vector_add(genome->genes, Gene_Init_Load(argline, genome->neurons));
+				//Allocate the new node
+				vector_add(genome->neurons, node);
+			}
+
+			//Read in a gene
+			else if (strcmp(curword, "g") == 0) {
+
+				char argline[1024];
+				strcpy(argline, curline);
+
+				gene_t *gene = Gene_Init_Load(argline, genome->neurons);
+				if (gene == 0) return genome;
+
+				//Add the gene to the genome
+				vector_add(genome->genes, gene);
+			}
 		}
 	}
 
@@ -1970,7 +1993,7 @@ void Genome_Add_Gene(genome_t *genome, vector *glist, gene_t *g)
 
 void Genome_FPrint(genome_t* genome, FILE *f)
 {
-	fprintf(f, "gnome_s\n");
+	fprintf(f, "gnome_s %d %f %f %f %f\n", genome->ID, genome->fitness, genome->final_pos[0], genome->final_pos[1], genome->final_pos[2]);
 
 	for (int i = 0; i < genome->neurons->count; i++)
 		Neuron_FPrint(genome->neurons->data[i], f);
@@ -1978,5 +2001,5 @@ void Genome_FPrint(genome_t* genome, FILE *f)
 	for (int i = 0; i < genome->genes->count; i++)
 		Gene_FPrint(genome->genes->data[i], f);
 
-	fprintf(f, "gnome_e\n");
+	fprintf(f, "gnome_e %d\n\n", genome->ID);
 }

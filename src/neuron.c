@@ -141,11 +141,14 @@ neuron_t* Neuron_Init_Load(char *argline)
 	char *curword;
 	int args[3] = { -1, -1, -1 }; // Args: ID, Type, Placement.
 
+	char wordbuf[1024];
+	strcpy(wordbuf, argline);
+
 	// Read the line into memory.
-	curword = strtok(argline, " ");
+	curword = strtok(wordbuf, " \n");
 
 	// n denotes node information, and should always be present as the first word.
-	if (curword != "n")
+	if (strcmp(curword, "n") != 0)
 	{
 		Con_Printf("Erroneus argline passed to node [%s]!", argline);
 		return 0;
@@ -154,12 +157,12 @@ neuron_t* Neuron_Init_Load(char *argline)
 	for (int i = 0; i < 3; i++)
 	{
 		// Read the next word.
-		curword = strtok(NULL, " ");
+		curword = strtok(NULL, " \n");
 
 		// Error handling.
 		if (curword == NULL)
 		{
-			Con_Printf("Error loading neuron #%s!", args[1]);
+			Con_Printf("Error loading neuron #%s value %d!", args[1], i);
 			return 0;
 		}
 		// Convert each argument to its decimal equivalent.

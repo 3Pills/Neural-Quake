@@ -86,42 +86,95 @@ gene_t* Gene_Init_Load(char *argline, vector *nodes)
 {
 	char *curword;
 
-	// Args : inode_id, onode_id, weight, recurrent, innovation_num, mutation_num, enabled.
-	int args[7] = { -1, -1, -1, -1, -1, -1, -1 };
+	int inode_id;
+	int onode_id;
+	double weight;
+	cbool recurrent;
+	int innovation_num;
+	double mutation_num;
+	cbool enabled;
+
+	char wordbuf[1024];
+	strcpy(wordbuf, argline);
 
 	// Read the line into memory.
-	curword = strtok(argline, " ");
+	curword = strtok(wordbuf, " \n");
 
 	// n denotes node information, and should always be present as the first word.
-	if (curword != "n")
+	if (strcmp(curword, "g") != 0)
 	{
 		Con_Printf("Erroneus argline passed to gene [%s]!", argline);
 		return 0;
 	}
 
-	for (int i = 0; i < 7; i++)
+	// Read the next word.
+	curword = strtok(NULL, " \n");
+
+	// Error handling.
+	if (curword == NULL)
 	{
-		// Read the next word.
-		curword = strtok(NULL, " ");
-
-		// Error handling.
-		if (curword == NULL)
-		{
-			Con_Printf("Error loading gene between node #%s and node #%s!", args[1], args[2]);
-			return 0;
-		}
-
-		// Convert each argument to its decimal equivalent.
-		sscanf(curword, "%d", &args[i]);
+		Con_Printf("Error loading value from gene between node #%d and node #%d!\n", inode_id, onode_id);
+		return 0;
 	}
+
+	// Convert each argument to its decimal equivalent.
+	sscanf(curword, "%d", &inode_id);
+
+	curword = strtok(NULL, " \n");
+	if (curword == NULL)
+	{
+		Con_Printf("Error loading value from gene between node #%d and node #%d!\n", inode_id, onode_id);
+		return 0;
+	}
+	sscanf(curword, "%d", &onode_id);
+
+	curword = strtok(NULL, " \n");
+	if (curword == NULL)
+	{
+		Con_Printf("Error loading value from gene between node #%d and node #%d!\n", inode_id, onode_id);
+		return 0;
+	}
+	sscanf(curword, "%lf", &weight);
+
+	curword = strtok(NULL, " \n");
+	if (curword == NULL)
+	{
+		Con_Printf("Error loading value from gene between node #%d and node #%d!\n", inode_id, onode_id);
+		return 0;
+	}
+	sscanf(curword, "%d", &recurrent);
+
+	curword = strtok(NULL, " \n");
+	if (curword == NULL)
+	{
+		Con_Printf("Error loading value from gene between node #%d and node #%d!\n", inode_id, onode_id);
+		return 0;
+	}
+	sscanf(curword, "%d", &innovation_num);
+
+	curword = strtok(NULL, " \n");
+	if (curword == NULL)
+	{
+		Con_Printf("Error loading value from gene between node #%d and node #%d!\n", inode_id, onode_id);
+		return 0;
+	}
+	sscanf(curword, "%lf", &mutation_num);
+
+	curword = strtok(NULL, " \n");
+	if (curword == NULL)
+	{
+		Con_Printf("Error loading value from gene between node #%d and node #%d!\n", inode_id, onode_id);
+		return 0;
+	}
+	sscanf(curword, "%d", &enabled);
 
 	gene_t* gene = malloc(sizeof(gene_t));
 	if (gene == 0) return 0;
 
 	// Apply direct parameters.
-	gene->innovation_num = args[4];
-	gene->mutation_num = args[5];
-	gene->enabled = args[6];
+	gene->innovation_num = innovation_num;
+	gene->mutation_num = mutation_num;
+	gene->enabled = enabled;
 	gene->frozen = false;
 
 	// Find the nodes on either side of the gene, using the ids stored in the file.
@@ -129,14 +182,14 @@ gene_t* Gene_Init_Load(char *argline, vector *nodes)
 	for (int i = 0; i < nodes->count; i++)
 	{
 		neuron_t *curnode = nodes->data[i];
-		if (curnode->node_id == args[0]) inode = nodes->data[i];
-		if (curnode->node_id == args[1]) onode = nodes->data[i];
+		if (curnode->node_id == inode_id) inode = nodes->data[i];
+		if (curnode->node_id == onode_id) onode = nodes->data[i];
 
 		if (inode != 0 && onode != 0) break;
 	}
 
 	// Now we can make a link.
-	gene->link = Link_Init(args[2], inode, onode, args[3]);
+	gene->link = Link_Init(weight, inode, onode, recurrent);
 
 	return gene;
 }
@@ -152,6 +205,6 @@ void Gene_FPrint(gene_t* gene, FILE *f)
 {
 	if (f == NULL) return;
 
-	fprintf(f, "g %i %i %f %i %f %f %i\n", gene->link->inode->node_id, gene->link->onode->node_id, 
+	fprintf(f, "g %i %i %f %i %d %f %i\n", gene->link->inode->node_id, gene->link->onode->node_id, 
 		gene->link->weight, gene->link->recurrent, gene->innovation_num, gene->mutation_num, gene->enabled);
 }

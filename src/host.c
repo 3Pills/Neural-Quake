@@ -513,9 +513,6 @@ void Host_ShutdownServer(cbool crash)
 // Baker --- this is redundant, but I want this function to do as expected
 	memset (&sv, 0, sizeof(sv)); // ServerSpawn already do this by Host_ClearMemory
 	memset (svs.clients, 0, svs.maxclientslimit*sizeof(client_t));
-
-	//stephenkoren: End the neural network when the server is flushed.
-	NQ_End(NULL);
 }
 
 
@@ -927,6 +924,9 @@ void Host_Shutdown(void)
 		S_Shutdown();
 		Input_Shutdown ();
 		VID_Shutdown();
+
+		//stephenkoren: End the neural network when the server is shut down.
+		NQ_End(NULL);
 #ifdef CORE_PTHREADS
 		ReadList_Ensure_Shutdown ();
 #endif // CORE_PTHREADS

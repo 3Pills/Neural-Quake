@@ -35,8 +35,8 @@ typedef struct innovation_s
 	int node_in_id;
 	int node_out_id;
 
-	double innovation_num1;
-	double innovation_num2;
+	int innovation_num1;
+	int innovation_num2;
 
 	double new_weight;
 	int new_trait_num;

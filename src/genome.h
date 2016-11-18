@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "gene.h"
 #include "innovation.h"
 #include "vector.h"
+#include "math_vector.h"
 
 //Describes the type of mutator to be appplied during link mutations.
 enum mutator_e {
@@ -36,6 +37,7 @@ typedef struct genome_s
 {
 	int ID;
 	int fitness; // Determined fitness of the Genome.
+	vec3_t final_pos; // Final position of the genome before evaluation finished.
 
 	//vector* traits; // Contains: trait_t*. Array of Traits within the genome.
 	vector* neurons; // Contains: neuron_t*. Array of Neurons within the genome.

@@ -25,7 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "environment.h"
 #include "genome.h"
 #include "species.h"
-#include "math_vector.h"
 
 typedef struct species_s species_t;
 typedef struct network_s network_t;
@@ -57,7 +56,6 @@ typedef struct organism_s
 	char metadata[128];
 	cbool modified;
 
-	vec3_t final_pos; // Final position of the organism before evaluation finished
 } organism_t; // Container of network. 
 
 organism_t* Organism_Init(double fit, genome_t* genome, int gen, const char* md);

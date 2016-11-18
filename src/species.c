@@ -558,16 +558,8 @@ cbool Species_FPrint(species_t* species, FILE* f)
 	//Print all the Organisms' Genomes to the outFile
 	for (int i = 0; i < species->organisms->count; i++) 
 	{
-		organism_t *curorg = species->organisms->data[i];
 		//Put the fitness for each organism in a comment
-		Organism_FPrint(curorg, f);
-
-		//If it is a winner, mark it in a comment
-		if (curorg->winner) fprintf(f, "/* ##------$ WINNER %d SPECIES #%d $------## */\n", curorg->gnome->ID, species->id);
-
-		Genome_FPrint(curorg->gnome, f);
-		//We can confirm by writing the genome #'s to the screen
-		//std::cout<<((*curorg)->gnome)->genome_id<<std::endl;
+		Organism_FPrint(species->organisms->data[i], f);
 	}
 	fprintf(f, "\n\n");
 

@@ -21,13 +21,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __NEURAL_H__
 #define __NEURAL_H__
 
-#include "vector.h"
 #include "quakedef.h"
-#include "network.h"
-#include "population.h"
-#include "organism.h"
-#include "genome.h"
-#include "species.h"
+
+// Defining base struct, which will be fleshed out via include later on.
+typedef struct organism_s organism_t;
 
 // ****** ENGINE HOOK FUNCTIONS ******
 // These functions are called from within the engine, and
@@ -129,7 +126,7 @@ void Draw_NeuralGraph();
 
 // Refreshes the hidden node data and node link data within the 
 // neural graph to match that of the organism argument.
-void UI_RefreshGraph(organism_t *organism);
+void UI_RefreshGraph(organism_t* organism);
 
 // Getter function to determine whether the neural network is active.
 cbool NQ_IsEnabled();

@@ -62,7 +62,7 @@ population_t *Population_Init_No_Mutation(genome_t *g, int size, float power);
 population_t *Population_Init_From_List(vector *genomeList, float power);
 
 // Construct from file data.
-population_t *Population_Init_Load(char* filename);
+population_t *Population_Init_Load(FILE *f);
 
 // Deconstructor
 void Population_Delete(population_t *pop);

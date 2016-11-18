@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "organism.h"
 #include "neural_def.h"
+#include "genome.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -50,8 +51,6 @@ organism_t* Organism_Init(double fit, genome_t* g, int gen, const char* md)
 	organism->mate_baby = 0;
 
 	organism->modified = true;
-
-	memset(organism->final_pos, 0, sizeof(float) * 3);
 
 	return organism;
 }
@@ -85,8 +84,6 @@ organism_t* Organism_Init_Copy(organism_t* o)
 	organism->mate_baby = o->mate_baby;
 
 	organism->modified = false;
-
-	VectorCopy(o->final_pos, organism->final_pos);
 	
 	return organism;
 }
@@ -122,6 +119,11 @@ cbool Organism_FPrint(organism_t* organism, FILE* f)
 		fprintf(f, "/* Organism #%d Fitness: %f Time: %d */\n", (organism->gnome)->ID, organism->fitness, organism->time_alive);
 	else
 		fprintf(f, "/* %s */\n", organism->metadata);
+
+	//If it is a winner, mark it in a comment
+	if (organism->winner) fprintf(f, "/* ##------$ WINNER %d SPECIES #%d $------## */\n", organism->gnome->ID, organism->species->id);
+
+	Genome_FPrint(organism->gnome, f);
 
 	return true;
 }
