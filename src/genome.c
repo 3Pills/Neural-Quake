@@ -165,7 +165,7 @@ genome_t* Genome_Init_Load(int id, FILE *f)
 			cbool md = false;
 			strcpy(metadata, "");
 			curword = strtok(NULL, " ");
-			while (strcmp(curword, "*/") != 0 && curword != NULL)
+			while (curword != NULL && strcmp(curword, "*/") != 0)
 			{
 				if (md) strncat(metadata, " ", 128 - strlen(metadata));
 				md = true;

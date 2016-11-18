@@ -109,6 +109,9 @@ population_t *Population_Init_Load(char* filename)
 	pop->cur_node_id = 0;
 	pop->cur_innov_num = 0.0;
 
+	pop->species = vector_init();
+	pop->organisms = vector_init();
+	pop->innovations = vector_init();
 
 	char* curword;
 	char curline[1024]; //max line size of 1024 characters
@@ -140,11 +143,11 @@ population_t *Population_Init_Load(char* filename)
 			genome_t *new_genome = Genome_Init_Load(idcheck, f);
 			vector_add(pop->organisms, Organism_Init(0.0, new_genome, 1, metadata));
 		}
-		else if (strcmp(curword, "/*"))
+		else if (strcmp(curword, "/*") == 0)
 		{
 			strcpy(metadata, "");
 			curword = strtok(NULL, " ");
-			while (strcmp(curword, "*/") != 0 && curword != NULL)
+			while (curword != NULL && strcmp(curword, "*/") != 0)
 			{
 				if (md) strncat(metadata, " ", 128 - strlen(metadata));
 				strncat(metadata, curword, 128 - strlen(metadata));

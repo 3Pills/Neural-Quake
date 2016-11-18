@@ -231,8 +231,11 @@ void SCR_DrawNeuralData()
 
 void NQ_Start(lparse_t *line)
 {
+	// If the network is on we don't need to initialize it!
+	if (network_on) return;
+
 	// Attempt to load filename if its passed in as argument.
-	if (line->count == 2) NQ_Load(line);
+	if (line != 0 && line->count == 2) NQ_Load(line);
 
 	Con_Printf("\nNeural population initialization\n");
 
@@ -414,6 +417,12 @@ void NQ_Start(lparse_t *line)
 
 void NQ_End(lparse_t *line)
 {
+	// If the network is already off then don't do anything.
+	if (!network_on) return;
+
+	if (line != 0 && line->count == 2)
+		NQ_Save(line);
+
 	// Disable all inputs on end.
 	for (int i = 0; i < NQ_OUTPUT_COUNT; i++)
 	{
@@ -428,6 +437,8 @@ void NQ_End(lparse_t *line)
 
 void NQ_Save(lparse_t *line)
 {
+	if (line == 0) return;
+
 	if (line->count != 2)
 	{
 		Con_Printf("nq_save [filename] : saves a file containing neural data.");
@@ -444,6 +455,8 @@ void NQ_Save(lparse_t *line)
 
 void NQ_Load(lparse_t *line)
 {
+	if (line == 0) return;
+
 	if (line->count < 2)
 	{
 		Con_Printf("nq_load [filename] : loads a file containing neural data.");
