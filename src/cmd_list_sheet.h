@@ -262,6 +262,13 @@ CMD_DEF (View_Init  , DEP_CLIENT  , "bf"                        , View_BonusFlas
 CMD_DEF (View_Init  , DEP_CLIENT  , "centerview"                , View_StartPitchDrift		, ""			)
 CMD_DEF (View_Init  , DEP_CLIENT  , "v_cshift"                  , View_cshift_f				, ""			)
 
+// stephenkoren -- added neural commands
+CMD_DEF (NQ_Init	, DEP_CLIENT  , "nq_start"					, NQ_Start					, ""			)
+CMD_DEF (NQ_Init	, DEP_CLIENT  , "nq_end"					, NQ_End					, ""			)
+CMD_DEF (NQ_Init	, DEP_CLIENT  , "nq_save"					, NQ_Save					, ""			)
+CMD_DEF (NQ_Init	, DEP_CLIENT  , "nq_load"					, NQ_Load					, ""			)
+CMD_DEF (NQ_Init	, DEP_CLIENT  , "nq_forcetimeout"			, NQ_ForceTimeout			, ""			)
+
 #ifdef GLQUAKE_RENDERER_SUPPORT
 CMD_DEF (Entity_Inspector_Init, DEP_CLIENT  , "tool_inspector"   , Tool_Inspector_f			, ""			)
 CMD_DEF (TexturePointer_Init, DEP_CLIENT  , "tool_texturepointer", Texture_Pointer_f		, ""			)

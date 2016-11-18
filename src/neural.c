@@ -25,57 +25,57 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // Determines whether the network should be executing or not. 
 // Set to true during NQ_Start.
-cbool network_on = false;
+static cbool network_on = false;
 
 // Neural network population. Accessor to every neural network. 
-population_t *population = 0;
+static population_t *population = 0;
 
 // Contains: trace_t*. A vector of input data gathered during NQ_GetInputs.
-vector *inputs = 0;
+static vector *inputs = 0;
 
 // Array of output values from the neural network.
-double *outputs = 0;
+static double *outputs = 0;
 
 // Timer to restart the level when the AI idles or dies.
-double timeout = 0.0;
+static double timeout = 0.0;
 
 // Timer to space out neural processing, rather than doing it every frame.
-double timestep = 0.0;
+static double timestep = 0.0;
 
-int trace_length = 1000.0f;
+static int trace_length = 1000.0f;
 
 // Index of the current species within the population.
-int currSpecies = 0;
+static int currSpecies = 0;
 
 // Index of the current organism within the species.
-int currOrganism = 0;
+static int currOrganism = 0;
 
 // Current generation of the population.
-int generation = 0;
+static int generation = 0;
 
 // Position of the player spawn point.
-vec3_t start_pos = { 0, 0, 0 };
+static vec3_t start_pos = { 0, 0, 0 };
 
 // Tracks the position change of the player. Used to determine timeout.
-vec3_t prev_pos = { 0, 0, 0 };
+static vec3_t prev_pos = { 0, 0, 0 };
 
 // Distance to travel before prev_pos is updated.
 // Roughly the distance of a jump.
-double distance_to_timeout = 64.0;
+static double distance_to_timeout = 64.0;
 
 // Contains: vec3_t*. Stores all the final pos results of every genome ever.
-vector *distStorage = 0;
+static vector *distStorage = 0;
 
 // Spawn flag to determine when to reload
-cbool spawnSet = false;
+static cbool spawnSet = false;
 
 // Name of the currently loaded level.
 // Tracks whether the level has changed or not.
-char levelName[64];
+static char levelName[64];
 
 // Output commands without +/- prefix. 
 // Prefix will be added depending on the output of the network.
-char* outputCmds[NQ_OUTPUT_COUNT] = {
+static char* outputCmds[NQ_OUTPUT_COUNT] = {
 	"forward", "back", "moveleft", "moveright",
 	"left", "right", "lookup", "lookdown", "attack", "jump"
 };
@@ -99,10 +99,10 @@ char* outputCmds[NQ_OUTPUT_COUNT] = {
 #define NQ_GRAPH_OUTPUT_HEIGHT 1.8
 
 // Contains: uinode_t. Stores nodes for display in the neural graph.
-vector *uinodes;
+static vector *uinodes;
 
 // Contains: uilink_t. Stores links for display in the neural graph.
-vector *uilinks;
+static vector *uilinks;
 
 void NQ_Init()
 {
@@ -209,6 +209,8 @@ void CL_NeuralMove(usercmd_t *cmd)
 
 void R_DrawNeuralData()
 {
+	if (!network_on || inputs == NULL) return;
+
 	R_DrawPoint(prev_pos, 12, (DistanceBetween2Points(prev_pos, cl_entities[cl.viewentity].origin) > distance_to_timeout) ? 15 : 7);
 
 	// Draw the impact point of the traces we gathered in NQ_GetInputs.
@@ -222,12 +224,16 @@ void R_DrawNeuralData()
 
 void SCR_DrawNeuralData()
 {
+	if (!network_on) return;
 	if (neuralstats.value) Draw_NeuralStats();
 	if (neuralgraph.value) Draw_NeuralGraph();
 }
 
 void NQ_Start(lparse_t *line)
 {
+	// Attempt to load filename if its passed in as argument.
+	if (line->count == 2) NQ_Load(line);
+
 	Con_Printf("\nNeural population initialization\n");
 
 	genome_t *start_genome = 0;
@@ -408,6 +414,15 @@ void NQ_Start(lparse_t *line)
 
 void NQ_End(lparse_t *line)
 {
+	// Disable all inputs on end.
+	for (int i = 0; i < NQ_OUTPUT_COUNT; i++)
+	{
+		char out_cmd[80];
+		strcpy(out_cmd, "-");
+		strcat(out_cmd, outputCmds[i]);
+		Cmd_ExecuteString(out_cmd, src_client);
+	}
+
 	network_on = false;
 }
 
@@ -415,7 +430,7 @@ void NQ_Save(lparse_t *line)
 {
 	if (line->count != 2)
 	{
-		printf("nq_save [filename] : saves a file containing neural data.");
+		Con_Printf("nq_save [filename] : saves a file containing neural data.");
 		return;
 	}
 
@@ -427,19 +442,21 @@ void NQ_Save(lparse_t *line)
 	Population_FPrint(population, f);
 }
 
-// Loads neural data from a file and begins executing it. 
-// Usage is nq_load <filename>.
 void NQ_Load(lparse_t *line)
 {
-	if (line->count != 2)
+	if (line->count < 2)
 	{
-		printf("nq_load [filename] : loads a file containing neural data.");
+		Con_Printf("nq_load [filename] : loads a file containing neural data.");
 		return;
 	}
 
 	Population_Init_Load(line->args[1]);
 }
 
+void NQ_ForceTimeout()
+{
+	NQ_Timeout();
+}
 
 void NQ_GetInputs()
 {
@@ -999,6 +1016,11 @@ void UI_RefreshGraph(organism_t *organism)
 
 		vector_add(uilinks, uilink);
 	}
+}
+
+cbool NQ_IsEnabled()
+{
+	return network_on;
 }
 
 double Sigmoid(double x) 
