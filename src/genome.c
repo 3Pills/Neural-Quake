@@ -17,10 +17,11 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+#include "neuron.h"
 #include "genome.h"
+#include "network.h"
 #include "neural.h"
 #include "neural_def.h"
-#include "neuron.h"
 
 //Constructor which takes full genome specs and puts them into the new one
 genome_t* Genome_Init(int id, vector* neurons, vector* genes)
@@ -28,7 +29,7 @@ genome_t* Genome_Init(int id, vector* neurons, vector* genes)
 	genome_t* genome = malloc(sizeof(genome_t));
 	if (genome == 0) return NULL;
 
-	genome->ID = id;
+	genome->id = id;
 	//genome->traits = traits;
 	genome->neurons = neurons;
 	genome->genes = genes;
@@ -44,7 +45,7 @@ genome_t* Genome_Init_Links(int id, vector* neurons, vector* links)
 	genome_t* genome = malloc(sizeof(genome_t));
 	if (genome == 0) return NULL;
 
-	genome->ID = id;
+	genome->id = id;
 	//genome->traits = traits;
 	genome->neurons = neurons;
 	genome->genes = vector_init();
@@ -53,9 +54,9 @@ genome_t* Genome_Init_Links(int id, vector* neurons, vector* links)
 
 	//We go through the links and turn them into original genes
 	for (int i = 0; i < links->count; i++) {
-		nlink_t* curlink = vector_get(links, i);
+		gene_t* curlink = links->data[i];
 		//vector_add(genome->genes, Gene_Init_Trait(curlink->trait, curlink->weight, curlink->inode, curlink->onode, curlink->recurrent, 1.0, 0.0));
-		vector_add(genome->genes, Gene_Init_Trait(curlink->weight, curlink->inode, curlink->onode, curlink->recurrent, 1.0, 0.0));
+		vector_add(genome->genes, Gene_Init(curlink->weight, curlink->inode, curlink->onode, 1.0, 0.0));
 	}
 
 	return genome;
@@ -67,7 +68,7 @@ genome_t* Genome_Init_Copy(genome_t* other)
 	genome_t* genome = malloc(sizeof(genome_t));
 	if (genome == 0) return NULL;
 
-	genome->ID = other->ID;
+	genome->id = other->id;
 	//genome->traits = vector_init();
 	genome->neurons = vector_init();
 	genome->genes = vector_init();
@@ -104,9 +105,9 @@ genome_t* Genome_Init_Copy(genome_t* other)
 
 	for (int i = 0; i < other->genes->count; ++i) {
 		gene_t* curgene = (gene_t*)other->genes->data[i];
-		inode = curgene->link->inode->dupe;
-		onode = curgene->link->onode->dupe;
-		//trait = curgene->link->trait;
+		inode = curgene->inode->dupe;
+		onode = curgene->onode->dupe;
+		//trait = curgene->trait;
 		//
 		//if (trait == 0) assoc_trait = 0;
 		//else
@@ -136,7 +137,7 @@ genome_t* Genome_Init_Load(int id, FILE *f)
 	genome_t* genome = malloc(sizeof(genome_t));
 	if (genome == 0) return NULL;
 
-	genome->ID = id;
+	genome->id = id;
 	genome->neurons = vector_init();
 	genome->genes = vector_init();
 	genome->fitness = atoi(strtok(NULL, " \n"));
@@ -168,7 +169,7 @@ genome_t* Genome_Init_Load(int id, FILE *f)
 				int idcheck;
 				sscanf(curword, "%d", &idcheck);
 
-				if (idcheck != genome->ID) Con_Printf("ERROR: id mismatch in genome [%d : %d]\n", genome->ID, idcheck);
+				if (idcheck != genome->id) Con_Printf("ERROR: id mismatch in genome [%d : %d]\n", genome->id, idcheck);
 
 				// We've read the genome completely.
 				done = true;
@@ -232,7 +233,7 @@ genome_t* Genome_Init_Structure(int new_id, int num_in, int num_out, int num_hid
 	genome_t* genome = malloc(sizeof(genome_t));
 	if (genome == 0) return ((void*)1);
 
-	genome->ID = new_id;
+	genome->id = new_id;
 	//genome->traits = vector_init();
 	genome->neurons = vector_init();
 	genome->genes = vector_init();
@@ -317,7 +318,7 @@ genome_t* Genome_Init_Structure(int new_id, int num_in, int num_out, int num_hid
 					for (; node_iter < totalnodes; node_iter++)
 					{
 						neuron_t* cur_node = (neuron_t*)genome->neurons->data[node_iter];
-						if (cur_node->node_id == row) {
+						if (cur_node->id == row) {
 							in_node = cur_node;
 							break;
 						}
@@ -326,7 +327,7 @@ genome_t* Genome_Init_Structure(int new_id, int num_in, int num_out, int num_hid
 					for (; node_iter < totalnodes; node_iter++)
 					{
 						neuron_t* cur_node = (neuron_t*)genome->neurons->data[node_iter];
-						if (cur_node->node_id == col) {
+						if (cur_node->id == col) {
 							out_node = cur_node;
 							break;
 						}
@@ -337,7 +338,7 @@ genome_t* Genome_Init_Structure(int new_id, int num_in, int num_out, int num_hid
 
 					//Add the gene to the genome
 					//vector_add(genome->genes, Gene_Init_Trait(newtrait, new_weight, in_node, out_node, false, count, new_weight));
-					vector_add(genome->genes, Gene_Init_Trait(new_weight, in_node, out_node, false, count, new_weight));
+					vector_add(genome->genes, Gene_Init(new_weight, in_node, out_node, count, new_weight));
 				}
 				else if (recurrent) { //Create a recurrent connection
 
@@ -346,7 +347,7 @@ genome_t* Genome_Init_Structure(int new_id, int num_in, int num_out, int num_hid
 					for (; node_iter < totalnodes; node_iter++)
 					{
 						neuron_t* cur_node = (neuron_t*)genome->neurons->data[node_iter];
-						if (cur_node->node_id == row) {
+						if (cur_node->id == row) {
 							in_node = cur_node;
 							break;
 						}
@@ -355,7 +356,7 @@ genome_t* Genome_Init_Structure(int new_id, int num_in, int num_out, int num_hid
 					for (node_iter = 0; node_iter < totalnodes; node_iter++)
 					{
 						neuron_t* cur_node = (neuron_t*)genome->neurons->data[node_iter];
-						if (cur_node->node_id == col) {
+						if (cur_node->id == col) {
 							out_node = cur_node;
 							break;
 						}
@@ -366,7 +367,7 @@ genome_t* Genome_Init_Structure(int new_id, int num_in, int num_out, int num_hid
 
 					//Add the gene to the genome
 					//vector_add(genome->genes, Gene_Init_Trait(newtrait, new_weight, in_node, out_node, false, count, new_weight));
-					vector_add(genome->genes, Gene_Init_Trait(new_weight, in_node, out_node, false, count, new_weight));
+					vector_add(genome->genes, Gene_Init(new_weight, in_node, out_node, count, new_weight));
 				}
 			}
 			count++; //increment gene counter	    
@@ -387,7 +388,7 @@ genome_t* Genome_Init_Auto(int num_in, int num_out, int num_hidden, int type)
 	genome_t* genome = malloc(sizeof(genome_t));
 	if (genome == 0) return ((void*)1);
 
-	genome->ID = 0;
+	genome->id = 0;
 	genome->neurons = vector_init();
 	genome->genes = vector_init();
 
@@ -459,7 +460,7 @@ genome_t* Genome_Init_Auto(int num_in, int num_out, int num_hidden, int type)
 			for (int j = 0; j < inputs->count; j++)
 			{
 				//Connect each input to each output
-				vector_add(genome->genes, Gene_Init_Trait(0, inputs->data[j], outputs->data[i], false, count, 0));
+				vector_add(genome->genes, Gene_Init(0, inputs->data[j], outputs->data[i], count, 0));
 
 				count++;
 			}
@@ -477,11 +478,11 @@ genome_t* Genome_Init_Auto(int num_in, int num_out, int num_hidden, int type)
 				for (int k = 0; k < hidden->count; k++)
 				{
 					// Connect Input to hidden.
-					vector_add(genome->genes, Gene_Init_Trait(0, inputs->data[j], hidden->data[k], false, count, 0));
+					vector_add(genome->genes, Gene_Init(0, inputs->data[j], hidden->data[k], count, 0));
 					count++;
 
 					// Connect hidden to output.
-					vector_add(genome->genes, Gene_Init_Trait(0, hidden->data[k], outputs->data[i], false, count, 0));
+					vector_add(genome->genes, Gene_Init(0, hidden->data[k], outputs->data[i], count, 0));
 					count++;
 				}
 			}
@@ -499,7 +500,7 @@ genome_t* Genome_Init_Auto(int num_in, int num_out, int num_hidden, int type)
 			for (int j = 0; j < inputs->count; j++)
 			{
 				// Connect each input to each hidden.
-				vector_add(genome->genes, Gene_Init_Trait(0, inputs->data[j], hidden->data[i], false, count, 0));
+				vector_add(genome->genes, Gene_Init(0, inputs->data[j], hidden->data[i], count, 0));
 				count++;
 			}
 		}
@@ -509,7 +510,7 @@ genome_t* Genome_Init_Auto(int num_in, int num_out, int num_hidden, int type)
 		{
 			for (int j = 0; j < hidden->count; j++)
 			{
-				vector_add(genome->genes, Gene_Init_Trait(0, hidden->data[j], outputs->data[i], false, count, 0));
+				vector_add(genome->genes, Gene_Init(0, hidden->data[j], outputs->data[i], count, 0));
 				count++;
 			}
 		}
@@ -517,7 +518,7 @@ genome_t* Genome_Init_Auto(int num_in, int num_out, int num_hidden, int type)
 		//Connect the bias to all outputs
 		for (int i = 0; i < outputs->count; i++)
 		{
-			vector_add(genome->genes, Gene_Init_Trait(0, bias, outputs->data[i], false, count, 0));
+			vector_add(genome->genes, Gene_Init(0, bias, outputs->data[i], count, 0));
 			count++;
 		}
 
@@ -526,7 +527,7 @@ genome_t* Genome_Init_Auto(int num_in, int num_out, int num_hidden, int type)
 		{
 			for (int j = 0; j < hidden->count; j++)
 			{
-				vector_add(genome->genes, Gene_Init_Trait(0, hidden->data[j], hidden->data[i], true, count, 0));
+				vector_add(genome->genes, Gene_Init(0, hidden->data[j], hidden->data[i], count, 0));
 				count++;
 			}
 		}
@@ -542,9 +543,6 @@ static genome_t *new_Genome_load(char *filename);
 //Destructor kills off all lists (including the trait vector)
 void Genome_Delete(genome_t *genome)
 {
-	//for (int i = 0; i < vector_count(genome->traits); i++) {
-	//	Trait_Delete(vector_get(genome->traits, i));
-	//}
 
 	free(genome);
 }
@@ -553,9 +551,6 @@ void Genome_Delete(genome_t *genome)
 network_t *Genome_Genesis(genome_t *genome, int id)
 {
 	neuron_t *newnode;
-	//trait_t *curtrait;
-	nlink_t *curlink;
-	nlink_t *newlink;
 
 	double maxweight = 0.0; //Compute the maximum weight for adaptation purposes
 	double weight_mag; //Measures absolute value of weights
@@ -598,15 +593,14 @@ network_t *Genome_Genesis(genome_t *genome, int id)
 		gene_t* curgene = genome->genes->data[i];
 		//Only create the link if Fthe gene is enabled
 		if (curgene->enabled == true) {
-			curlink = curgene->link;
-			inode = curlink->inode->analogue;
-			onode = curlink->onode->analogue;
+			inode = curgene->inode->analogue;
+			onode = curgene->onode->analogue;
 			//NOTE: This line could be run through a recurrency check if desired
 			// (no need to in the current implementation of NEAT)
-			newlink = Link_Init(curlink->weight, inode, onode, curlink->recurrent);
+			//newlink = Link_Init(curgene->weight, inode, onode, curgene->recurrent);
 
-			vector_add(onode->ilinks, newlink);
-			vector_add(inode->olinks, newlink);
+			vector_add(onode->ilinks, curgene);
+			vector_add(inode->olinks, curgene);
 
 			//Derive link's parameters from its Trait pointer
 			//curtrait = curlink->trait;
@@ -614,7 +608,7 @@ network_t *Genome_Genesis(genome_t *genome, int id)
 			//Link_Derive_Trait(newlink, curtrait);
 
 			//Keep track of maximum weight
-			weight_mag = fabs(newlink->weight);
+			weight_mag = fabs(curgene->weight);
 			if (weight_mag > maxweight) maxweight = weight_mag;
 		}
 	}
@@ -647,13 +641,6 @@ genome_t *Genome_Duplicate(genome_t *genome, int new_id)
 	for (int i = 0; i < genome->neurons->count; i++)
 	{
 		neuron_t *curnode = genome->neurons->data[i];
-		//First, find the trait that this node points to
-		//if (curnode->trait == 0) assoc_trait = 0;
-		//else 
-		//	for (int j = 0; j < traits->count; j++) 
-		//		if (((trait_t*)traits->data[j])->id == curnode->trait->id)
-		//			assoc_trait = traits->data[j];
-
 		neuron_t *newnode = Neuron_Init_Derived(curnode);
 
 		curnode->dupe = newnode;  //Remember this node's old copy
@@ -666,17 +653,8 @@ genome_t *Genome_Duplicate(genome_t *genome, int new_id)
 		gene_t *curgene = genome->genes->data[i];
 
 		//First find the nodes connected by the gene's link
-		neuron_t *inode = curgene->link->inode->dupe;
-		neuron_t *onode = curgene->link->onode->dupe;
-
-		//Get a pointer to the trait expressed by this gene
-		//trait_t *traitptr = curgene->link->trait;
-		//
-		//if (traitptr == 0) assoc_trait = 0;
-		//else
-		//	for (int j = 0; j < traits->count; j++)
-		//		if (((trait_t*)traits->data[j])->id == traitptr->id)
-		//			assoc_trait = traits->data[j];
+		neuron_t *inode = curgene->inode->dupe;
+		neuron_t *onode = curgene->onode->dupe;
 
 		vector_add(genes, Gene_Init_Dupe(curgene, inode, onode));
 	}
@@ -690,8 +668,10 @@ cbool Genome_Verify(genome_t *genome)
 	// Check all gene nodes.
 	for (int i = 0; i < genome->genes->count; i++) 
 	{
-		neuron_t *inode = ((gene_t*)genome->genes->data[i])->link->inode;
-		neuron_t *onode = ((gene_t*)genome->genes->data[i])->link->onode;
+		gene_t *curgene = genome->genes->data[i];
+
+		neuron_t *inode = curgene->inode;
+		neuron_t *onode = curgene->onode;
 		
 		neuron_t *cur_inode = 0, *cur_onode = 0;
 		for (int j = 0; j < genome->neurons->count; j++)
@@ -712,8 +692,8 @@ cbool Genome_Verify(genome_t *genome)
 	for (int j = 0; j < genome->neurons->count; j++)
 	{
 		neuron_t *curnode = (neuron_t*)genome->neurons->data[j];
-		if (curnode->node_id < last_id) return false;
-		last_id = curnode->node_id;
+		if (curnode->id < last_id) return false;
+		last_id = curnode->id;
 	}
 
 	return true;
@@ -721,7 +701,7 @@ cbool Genome_Verify(genome_t *genome)
 
 int Genome_Get_Last_Node_ID(genome_t *genome)
 {
-	return ((neuron_t*)genome->neurons->data[genome->neurons->count - 1])->node_id + 1;
+	return ((neuron_t*)genome->neurons->data[genome->neurons->count - 1])->id + 1;
 }
 
 double Genome_Get_Last_Gene_Innovnum(genome_t *genome)
@@ -774,55 +754,53 @@ void Genome_Mutate_Link_Weights(genome_t *genome, double power, double rate, enu
 	//they have stood the test of time
 
 	double num = 0.0; //counts gene placement
-	double endpart = genome->genes->count*0.8;; //Signifies the last part of the genome
+	double endpart = genome->genes->count*0.8; //Signifies the last part of the genome
 
 	//Go through all the Genes and perturb their link's weights
 	for (int i = 0; i < genome->genes->count; i++) {
 		gene_t *curgene = genome->genes->data[i];
-		//Don't mutate weights of frozen links
-		if (!curgene->frozen) {
-			double gausspoint = 1.0 - rate;
-			double coldgausspoint = 1.0 - rate;
 
-			//Once in a while really shake things up
-			if (Random_Float() > 0.5)
-			{
-				gausspoint = 0.3;
-				coldgausspoint = 0.1;
-			}
-			else if ((genome->genes->count >= 10) && (num > endpart))
-			{
-				gausspoint = 0.5;  //Mutate by modification % of connections
-				coldgausspoint = 0.3; //Mutate the rest by replacement % of the time
-			}
-			else if (Random_Float() > 0.5)
-			{
-				coldgausspoint -= 0.1;
-			}
+		double gausspoint = 1.0 - rate;
+		double coldgausspoint = 1.0 - rate;
 
-			//Possible methods of setting the perturbation:
-			//randnum=gaussrand()*powermod;
-			//randnum=gaussrand();
-
-			double randnum = ((Random_Float() - 0.5) * 2) * power;
-			//std::cout << "RANDOM: " << randnum << " " << randposneg() << " " << randfloat() << " " << power << " " << powermod << std::endl;
-			if (mut_type == NQ_GAUSSIAN) {
-				double randchoice = Random_Float();
-				if (randchoice > gausspoint)
-					curgene->link->weight += randnum;
-				else if (randchoice > coldgausspoint)
-					curgene->link->weight = randnum;
-			}
-			else if (mut_type == NQ_COLDGAUSSIAN)
-				curgene->link->weight = randnum;
-
-			//Cap the weights at 8.0 (experimental)
-			curgene->link->weight = fmin(fmax(-8.0, curgene->link->weight), 8.0);
-
-			//Record the innovation
-			curgene->mutation_num = curgene->link->weight;
-			num += 1.0;
+		//Once in a while really shake things up
+		if (Random_Float() > 0.5)
+		{
+			gausspoint = 0.3;
+			coldgausspoint = 0.1;
 		}
+		else if ((genome->genes->count >= 10) && (num > endpart))
+		{
+			gausspoint = 0.5;  //Mutate by modification % of connections
+			coldgausspoint = 0.3; //Mutate the rest by replacement % of the time
+		}
+		else if (Random_Float() > 0.5)
+		{
+			coldgausspoint -= 0.1;
+		}
+
+		//Possible methods of setting the perturbation:
+		//randnum=gaussrand()*powermod;
+		//randnum=gaussrand();
+
+		double randnum = ((Random_Float() - 0.5) * 2) * power;
+		//std::cout << "RANDOM: " << randnum << " " << randposneg() << " " << randfloat() << " " << power << " " << powermod << std::endl;
+		if (mut_type == NQ_GAUSSIAN) {
+			double randchoice = Random_Float();
+			if (randchoice > gausspoint)
+				curgene->weight += randnum;
+			else if (randchoice > coldgausspoint)
+				curgene->weight = randnum;
+		}
+		else if (mut_type == NQ_COLDGAUSSIAN)
+			curgene->weight = randnum;
+
+		//Cap the weights at 8.0 (experimental)
+		curgene->weight = fmin(fmax(-8.0, curgene->weight), 8.0);
+
+		//Record the innovation
+		curgene->mutation_num = curgene->weight;
+		num += 1.0;
 	}
 }
 
@@ -842,7 +820,7 @@ void Genome_Mutate_Toggle_Enable(genome_t *genome, int times)
 			for (int j = 0; j < genome->genes->count; j++)
 			{
 				gene_t* other = genome->genes->data[j];
-				if (other->link->inode == gene->link->inode &&
+				if (other->inode == gene->inode &&
 					other->enabled &&
 					other->innovation_num != gene->innovation_num)
 				{
@@ -886,14 +864,14 @@ cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, d
 		for (int i = 0; i < genome->genes->count; i++) 
 		{
 			gene = genome->genes->data[i];
-			if (gene->enabled && gene->link->inode->node_label != NQ_BIAS)
+			if (gene->enabled && gene->inode->node_label != NQ_BIAS)
 			{
 				for (int j = i; j < genome->genes->count; j++)
 				{
 					gene = genome->genes->data[j];
 					// Add some randomisation in, with a higher chance of getting older nodes.
 					// This encourages splitting to distribute evenly.
-					if (Random_Float() > 0.3 && gene->link->inode->node_label != NQ_BIAS)
+					if (Random_Float() > 0.3 && gene->inode->node_label != NQ_BIAS)
 					{
 						if (!gene->enabled) return false;
 						found = true;
@@ -910,7 +888,7 @@ cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, d
 		for (int i = 0; (i < 20 && !found); i++) 
 		{
 			gene = genome->genes->data[Random_Int(0, genome->genes->count - 1)];
-			if (gene->enabled && gene->link->inode->node_label != NQ_BIAS)
+			if (gene->enabled && gene->inode->node_label != NQ_BIAS)
 				found = true;
 		}
 	}
@@ -921,15 +899,12 @@ cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, d
 	//Disabled the gene
 	gene->enabled = false;
 
-	//Extract the link
-	nlink_t *link = gene->link;
-
 	//The weight of the original link
-	double oldweight = gene->link->weight;
+	double oldweight = gene->weight;
 
 	//Extract the nodes
-	neuron_t *inode = link->inode;
-	neuron_t *onode = link->onode;
+	neuron_t *inode = gene->inode;
+	neuron_t *onode = gene->onode;
 
 	//The new Genes
 	gene_t *newgene1 = 0;
@@ -956,20 +931,20 @@ cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, d
 			//newnode->trait = genome->traits->data[0];
 
 			//Create the new Genes
-			newgene1 = Gene_Init_Trait(1.0, inode, newnode, (link->recurrent), curinnov, 0);
-			newgene2 = Gene_Init_Trait(oldweight, newnode, onode, false, curinnov + 1, 0);
+			newgene1 = Gene_Init(1.0, inode, newnode, curinnov, 0);
+			newgene2 = Gene_Init(oldweight, newnode, onode, curinnov + 1, 0);
 			curinnov += 2.0;
 
 			//Add the innovations (remember what was done)
-			vector_add(innovs, Innovation_Init(inode->node_id, onode->node_id, curinnov - 2.0, curinnov - 1.0, newnode->node_id, gene->innovation_num));
+			vector_add(innovs, Innovation_Init(inode->id, onode->id, curinnov - 2.0, curinnov - 1.0, newnode->id, gene->innovation_num));
 			break;
 		}
 		else 
 		{
 			innovation_t* innovation = innovs->data[i];
 			if (innovation->innovation_type == NQ_NEWNODE &&
-				innovation->node_in_id == inode->node_id &&
-				innovation->node_out_id == onode->node_id &&
+				innovation->node_in_id == inode->id &&
+				innovation->node_out_id == onode->id &&
 				innovation->old_innov_num == gene->innovation_num)
 			{
 				//Here, the innovation has been done before
@@ -984,8 +959,8 @@ cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, d
 				//newnode->trait = genome->traits->data[0];
 
 				//Create the new Genes
-				newgene1 = Gene_Init_Trait(1.0, inode, newnode, (link->recurrent), innovation->innovation_num1, 0);
-				newgene2 = Gene_Init_Trait(oldweight, newnode, onode, false, innovation->innovation_num2, 0);
+				newgene1 = Gene_Init(1.0, inode, newnode, innovation->innovation_num1, 0);
+				newgene2 = Gene_Init(oldweight, newnode, onode, innovation->innovation_num2, 0);
 				break;
 			}
 		}
@@ -997,7 +972,7 @@ cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, d
 	Genome_Add_Gene(genome, genome->genes, newgene1);  //Add genes in correct order
 	Genome_Add_Gene(genome, genome->genes, newgene2);
 
-	vector_insert(genome->neurons, newnode->node_id, newnode);
+	vector_insert(genome->neurons, newnode->id, newnode);
 	//Genome_Node_Insert(genome, genome->neurons, newnode);
 
 	return true;
@@ -1059,13 +1034,12 @@ cbool Genome_Mutate_Add_Link(genome_t *genome, vector *innovs, double curinnov, 
 		//Storage for an existing link.
 		gene_t *gene = 0;
 
-		//See if a link already exists  ALSO STOP AT END OF GENES!!!!
+		//See if a link already exists
 		for (int j = 0; j < genome->genes->count; j++)
 		{
 			if (nodep2->type == NQ_SENSOR &&
-				((gene_t*)genome->genes->data[j])->link->inode == nodep1 &&
-				((gene_t*)genome->genes->data[j])->link->onode == nodep2 &&
-				((gene_t*)genome->genes->data[j])->link->recurrent == do_recur)
+				((gene_t*)genome->genes->data[j])->inode == nodep1 &&
+				((gene_t*)genome->genes->data[j])->onode == nodep2)
 			{
 				gene = genome->genes->data[j];
 				break;
@@ -1075,7 +1049,7 @@ cbool Genome_Mutate_Add_Link(genome_t *genome, vector *innovs, double curinnov, 
 		if (gene == 0)
 		{
 			int count = 0;
-			recurflag = Network_Is_Recur(genome->phenotype, nodep1->analogue, nodep2->analogue, &count, thresh);
+			//recurflag = Network_Is_Recur(genome->phenotype, nodep1->analogue, nodep2->analogue, &count, thresh);
 
 			//ADDED: CONSIDER connections out of outputs recurrent
 			if (nodep1->type == NQ_OUTPUT || nodep2->type == NQ_OUTPUT)
@@ -1113,10 +1087,10 @@ cbool Genome_Mutate_Add_Link(genome_t *genome, vector *innovs, double curinnov, 
 				//newweight=(gaussrand())/1.5;  //Could use a gaussian
 				double newweight = (Random_Float() - 0.5) * 2;
 
-				newgene = Gene_Init_Trait(newweight, nodep1, nodep2, recurflag, curinnov, newweight);
+				newgene = Gene_Init(newweight, nodep1, nodep2, curinnov, newweight);
 
 				//Add the innovation
-				vector_add(innovs, Innovation_Init_Link(nodep1->node_id, nodep2->node_id, curinnov, newweight));
+				vector_add(innovs, Innovation_Init_Link(nodep1->id, nodep2->id, curinnov, newweight));
 
 				curinnov = curinnov + 1.0;
 				break;
@@ -1125,15 +1099,15 @@ cbool Genome_Mutate_Add_Link(genome_t *genome, vector *innovs, double curinnov, 
 			{
 				innovation_t* innovation = innovs->data[i];
 				if (innovation->innovation_type == NQ_NEWLINK &&
-					innovation->node_in_id == nodep1->node_id &&
-					innovation->node_out_id == nodep2->node_id &&
+					innovation->node_in_id == nodep1->id &&
+					innovation->node_out_id == nodep2->id &&
 					innovation->recur_flag == recurflag)
 				{
 					//Here, the innovation has been done before
 
 					//Create new gene
 					//newgene = Gene_Init_Trait(genome->traits->data[innovation->new_trait_num], innovation->new_weight, nodep1, nodep2, recurflag, innovation->innovation_num1, 0);
-					newgene = Gene_Init_Trait(innovation->new_weight, nodep1, nodep2, recurflag, innovation->innovation_num1, 0);
+					newgene = Gene_Init(innovation->new_weight, nodep1, nodep2, innovation->innovation_num1, 0);
 					break;
 				}
 			}
@@ -1167,7 +1141,7 @@ void Genome_Mutate_Add_Sensor(genome_t *genome, vector *innovs, double curinnov)
 		int outputConnections = 0;
 
 		for (int j = 0; j < genome->genes->count; j++)
-			if (((gene_t*)genome->genes->data[j])->link->onode->node_label == NQ_OUTPUT)
+			if (((gene_t*)genome->genes->data[j])->onode->node_label == NQ_OUTPUT)
 				outputConnections++;
 
 
@@ -1193,7 +1167,7 @@ void Genome_Mutate_Add_Sensor(genome_t *genome, vector *innovs, double curinnov)
 		for (int j = 0; j < genome->genes->count; j++) 
 		{
 			gene_t *gene = genome->genes->data[j];
-			if (gene->link->inode == sensor && gene->link->onode == output) 
+			if (gene->inode == sensor && gene->onode == output) 
 				found = true;
 		}
 
@@ -1214,10 +1188,10 @@ void Genome_Mutate_Add_Sensor(genome_t *genome, vector *innovs, double curinnov)
 
 					//Create the new gene
 					//newgene = Gene_Init_Trait(genome->traits->data[trait_num], newweight, sensor, output, false, curinnov, newweight);
-					newgene = Gene_Init_Trait(newweight, sensor, output, false, curinnov, newweight);
+					newgene = Gene_Init(newweight, sensor, output, curinnov, newweight);
 
 					//Add the innovation
-					vector_add(innovs, Innovation_Init_Link(sensor->node_id, output->node_id, curinnov, newweight));
+					vector_add(innovs, Innovation_Init_Link(sensor->id, output->id, curinnov, newweight));
 
 					curinnov = curinnov + 1.0;
 				}
@@ -1225,13 +1199,13 @@ void Genome_Mutate_Add_Sensor(genome_t *genome, vector *innovs, double curinnov)
 				{
 					innovation_t* innovation = innovs->data[i];
 					if (innovation->innovation_type == NQ_NEWLINK &&
-						innovation->node_in_id == sensor->node_id &&
-						innovation->node_out_id == output->node_id &&
+						innovation->node_in_id == sensor->id &&
+						innovation->node_out_id == output->id &&
 						innovation->recur_flag == false)
 					{
 						//Create new gene
 						//newgene = Gene_Init_Trait(genome->traits->data[innovation->new_trait_num], innovation->new_weight, sensor, output, false, innovation->innovation_num1, 0);
-						newgene = Gene_Init_Trait(innovation->new_weight, sensor, output, false, innovation->innovation_num1, 0);
+						newgene = Gene_Init(innovation->new_weight, sensor, output, innovation->innovation_num1, 0);
 						break;
 					}
 				}
@@ -1323,12 +1297,10 @@ genome_t *Genome_Mate_Multipoint(genome_t *genome, genome_t *other, int genomeid
 			checkedgene = newgenes->data[j];
 
 			//Check if they either share the same node IDs, or if their inputs and outputs are recursive and link between each other.
-			if ((checkedgene->link->inode->node_id == chosengene->link->inode->node_id &&
-				checkedgene->link->onode->node_id == chosengene->link->onode->node_id &&
-				checkedgene->link->recurrent == chosengene->link->recurrent) ||
-				(checkedgene->link->inode->node_id == chosengene->link->onode->node_id &&
-				checkedgene->link->onode->node_id == chosengene->link->inode->node_id &&
-				checkedgene->link->recurrent && chosengene->link->recurrent))
+			if ((checkedgene->inode->id == chosengene->inode->id &&
+				checkedgene->onode->id == chosengene->onode->id) ||
+				(checkedgene->inode->id == chosengene->onode->id &&
+				checkedgene->onode->id == chosengene->inode->id))
 			{
 				skip = true;
 				break;
@@ -1343,15 +1315,15 @@ genome_t *Genome_Mate_Multipoint(genome_t *genome, genome_t *other, int genomeid
 			neuron_t *new_onode = 0;
 
 			//Next check for the nodes, add them if not in the baby Genome already
-			inode = chosengene->link->inode;
-			onode = chosengene->link->onode;
+			inode = chosengene->inode;
+			onode = chosengene->onode;
 
-			if (inode->node_id < onode->node_id)
+			if (inode->id < onode->id)
 			{
 				//Checking for inode's existence
 				neuron_t* curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == inode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1365,7 +1337,7 @@ genome_t *Genome_Mate_Multipoint(genome_t *genome, genome_t *other, int genomeid
 				//Getting onode this time.
 				curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == onode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1375,12 +1347,12 @@ genome_t *Genome_Mate_Multipoint(genome_t *genome, genome_t *other, int genomeid
 				}
 				else new_onode = curnode;
 			}
-			else // If our onode has a higher ID we want to add it first.
+			else // If our onode has a higher id we want to add it first.
 			{
 				//Checking for onode's existence
 				neuron_t* curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == onode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1394,7 +1366,7 @@ genome_t *Genome_Mate_Multipoint(genome_t *genome, genome_t *other, int genomeid
 				//Getting inode this time.
 				curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == inode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1456,7 +1428,7 @@ genome_t *Genome_Mate_Multipoint_Avg(genome_t *genome, genome_t *other, int geno
 		}
 	}
 
-	gene_t *avgene = Gene_Init_Trait(0, 0, 0, 0, 0, 0);
+	gene_t *avgene = Gene_Init(0, 0, 0, 0, 0);
 
 	//Now move through the Genes of each parent until both genomes end
 	int loop_length = fmax(genome->genes->count, other->genes->count);
@@ -1489,20 +1461,17 @@ genome_t *Genome_Mate_Multipoint_Avg(genome_t *genome, genome_t *other, int geno
 
 			if (p2innov == p1innov)
 			{
-				//if (Random_Float() > 0.5) avgene->link->trait = p1gene->link->trait;
-				//else avgene->link->trait = p2gene->link->trait;
+				//if (Random_Float() > 0.5) avgene->trait = p1gene->trait;
+				//else avgene->trait = p2gene->trait;
 
 				//WEIGHTS AVERAGED HERE
-				avgene->link->weight = (p1gene->link->weight + p2gene->link->weight) / 2.0;
+				avgene->weight = (p1gene->weight + p2gene->weight) / 2.0;
 
-				if (Random_Float() > 0.5) avgene->link->inode = p1gene->link->inode;
-				else avgene->link->inode = p2gene->link->inode;
+				if (Random_Float() > 0.5) avgene->inode = p1gene->inode;
+				else avgene->inode = p2gene->inode;
 
-				if (Random_Float() > 0.5) avgene->link->onode = p1gene->link->onode;
-				else avgene->link->onode = p2gene->link->onode;
-
-				if (Random_Float() > 0.5) avgene->link->recurrent = p1gene->link->recurrent;
-				else (avgene->link)->recurrent = p2gene->link->recurrent;
+				if (Random_Float() > 0.5) avgene->onode = p1gene->onode;
+				else avgene->onode = p2gene->onode;
 
 				avgene->innovation_num = p1gene->innovation_num;
 				avgene->mutation_num = (p1gene->mutation_num + p2gene->mutation_num) / 2.0;
@@ -1541,12 +1510,10 @@ genome_t *Genome_Mate_Multipoint_Avg(genome_t *genome, genome_t *other, int geno
 			checkedgene = newgenes->data[j];
 
 			//Check if they either share the same node IDs, or if their inputs and outputs are recursive and link between each other.
-			if ((checkedgene->link->inode->node_id == chosengene->link->inode->node_id &&
-				checkedgene->link->onode->node_id == chosengene->link->onode->node_id &&
-				checkedgene->link->recurrent == chosengene->link->recurrent) ||
-				(checkedgene->link->inode->node_id == chosengene->link->onode->node_id &&
-				checkedgene->link->onode->node_id == chosengene->link->inode->node_id &&
-				checkedgene->link->recurrent && chosengene->link->recurrent))
+			if ((checkedgene->inode->id == chosengene->inode->id &&
+				checkedgene->onode->id == chosengene->onode->id) ||
+				(checkedgene->inode->id == chosengene->onode->id &&
+				checkedgene->onode->id == chosengene->inode->id))
 			{
 				skip = true;
 				break;
@@ -1562,21 +1529,21 @@ genome_t *Genome_Mate_Multipoint_Avg(genome_t *genome, genome_t *other, int geno
 
 			//int trait_num = 0;
 			//Get the trait pointer.
-			//if (chosengene->link->trait == 0)
+			//if (chosengene->trait == 0)
 			//	trait_num = ((trait_t*)genome->traits->data[0])->id - 1;
 			//else //The subtracted number normalizes depending on whether traits start counting at 1 or 0
-			//	trait_num = chosengene->link->trait->id - ((trait_t*)genome->traits->data[0])->id;
+			//	trait_num = chosengene->trait->id - ((trait_t*)genome->traits->data[0])->id;
 
 			//Next check for the nodes, add them if not in the baby Genome already
-			inode = chosengene->link->inode;
-			onode = chosengene->link->onode;
+			inode = chosengene->inode;
+			onode = chosengene->onode;
 
-			if (inode->node_id < onode->node_id)
+			if (inode->id < onode->id)
 			{
 				//Checking for inode's existence
 				neuron_t* curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == inode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1590,7 +1557,7 @@ genome_t *Genome_Mate_Multipoint_Avg(genome_t *genome, genome_t *other, int geno
 				//Getting onode this time.
 				curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == onode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1605,7 +1572,7 @@ genome_t *Genome_Mate_Multipoint_Avg(genome_t *genome, genome_t *other, int geno
 				//Checking for onode's existence
 				neuron_t* curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == onode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1619,7 +1586,7 @@ genome_t *Genome_Mate_Multipoint_Avg(genome_t *genome, genome_t *other, int geno
 				//Getting inode this time.
 				curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == inode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1662,7 +1629,7 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 	//for (int i = 0; i < genome->traits->count; i++)
 	//	vector_add(newtraits, Trait_Init_Merge(genome->traits->data[i], other->traits->data[i]));
 
-	gene_t *avgene = Gene_Init_Trait(0, 0, 0, 0, 0, 0);
+	gene_t *avgene = Gene_Init(0, 0, 0, 0, 0);
 
 	//NEW 3/17/03 Make sure all sensors and outputs are included
 	for (int i = 0; i < other->neurons->count; i++)
@@ -1718,20 +1685,17 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 					chosengene = p2gene;
 				else
 				{
-					//if (Random_Float() > 0.5) avgene->link->trait = p1gene->link->trait;
-					//else avgene->link->trait = p2gene->link->trait;
+					//if (Random_Float() > 0.5) avgene->trait = p1gene->trait;
+					//else avgene->trait = p2gene->trait;
 
 					//WEIGHTS AVERAGED HERE
-					avgene->link->weight = (p1gene->link->weight + p2gene->link->weight) / 2.0;
+					avgene->weight = (p1gene->weight + p2gene->weight) / 2.0;
 
-					if (Random_Float() > 0.5) avgene->link->inode = p1gene->link->inode;
-					else avgene->link->inode = p2gene->link->inode;
+					if (Random_Float() > 0.5) avgene->inode = p1gene->inode;
+					else avgene->inode = p2gene->inode;
 
-					if (Random_Float() > 0.5) avgene->link->onode = p1gene->link->onode;
-					else avgene->link->onode = p2gene->link->onode;
-
-					if (Random_Float() > 0.5) avgene->link->recurrent = p1gene->link->recurrent;
-					else (avgene->link)->recurrent = p2gene->link->recurrent;
+					if (Random_Float() > 0.5) avgene->onode = p1gene->onode;
+					else avgene->onode = p2gene->onode;
 
 					avgene->innovation_num = p1gene->innovation_num;
 					avgene->mutation_num = (p1gene->mutation_num + p2gene->mutation_num) / 2.0;
@@ -1767,12 +1731,8 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 			checkedgene = newgenes->data[j];
 
 			//Check if they either share the same node IDs, or if their inputs and outputs are recursive and link between each other.
-			if ((checkedgene->link->inode->node_id == chosengene->link->inode->node_id &&
-				 checkedgene->link->onode->node_id == chosengene->link->onode->node_id &&
-				 checkedgene->link->recurrent == chosengene->link->recurrent) ||
-				(checkedgene->link->inode->node_id == chosengene->link->onode->node_id &&
-				 checkedgene->link->onode->node_id == chosengene->link->inode->node_id &&
-				 checkedgene->link->recurrent && chosengene->link->recurrent))
+			if (checkedgene->inode->id == chosengene->inode->id &&
+				 checkedgene->onode->id == chosengene->onode->id)
 			{
 				skip = true;
 				break;
@@ -1788,22 +1748,22 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 
 			//int trait_num = 0;
 			////Get the trait pointer.
-			//if (chosengene->link->trait == 0)
+			//if (chosengene->trait == 0)
 			//	trait_num = ((trait_t*)genome->traits->data[0])->id - 1;
 			//else //The subtracted number normalizes depending on whether traits start counting at 1 or 0
-			//	trait_num = chosengene->link->trait->id - ((trait_t*)genome->traits->data[0])->id;
+			//	trait_num = chosengene->trait->id - ((trait_t*)genome->traits->data[0])->id;
 
 			//Next check for the nodes, add them if not in the baby Genome already
 
-			inode = chosengene->link->inode;
-			onode = chosengene->link->onode;
+			inode = chosengene->inode;
+			onode = chosengene->onode;
 
-			if (inode->node_id < onode->node_id)
+			if (inode->id < onode->id)
 			{
 				//Checking for inode's existence
 				neuron_t* curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == inode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1817,7 +1777,7 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 				//Getting onode this time.
 				curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == onode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1832,7 +1792,7 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 				//Checking for onode's existence
 				neuron_t* curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == onode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == onode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1846,7 +1806,7 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 				//Getting inode this time.
 				curnode = 0;
 				for (int j = 0; j < newnodes->count && curnode == 0; j++)
-					if (((neuron_t*)newnodes->data[j])->node_id == inode->node_id)
+					if (((neuron_t*)newnodes->data[j])->id == inode->id)
 						curnode = newnodes->data[j];
 
 				if (curnode == 0)
@@ -1870,6 +1830,14 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 	return (Genome_Init(genomeid, newnodes, newgenes));
 }
 
+double Genome_Compatibility(genome_t *genome, genome_t *other)
+{
+
+
+	return true;
+}
+
+/*
 double Genome_Compatibility(genome_t *genome, genome_t *other)
 {
 	//Set up the counters
@@ -1910,7 +1878,6 @@ double Genome_Compatibility(genome_t *genome, genome_t *other)
 		NQ_MUTDIFF_COEFF * (mut_diff_total / num_matching));
 }
 
-/*
 double Genome_Trait_Compare(genome_t *genome, trait_t *t1, trait_t *t2)
 {
 	if ((t1->id == 1 && t2->id >= 2) || (t2->id == 1 && t1->id >= 2))
@@ -1958,7 +1925,7 @@ void Genome_Randomize_Traits(genome_t *genome)
 	{
 		gene_t *curgene = genome->genes->data[i];
 		int trait_num = Random_Int(1, genome->traits->count);
-		curgene->link->trait_id = trait_num;
+		curgene->trait_id = trait_num;
 
 		trait_t *curtrait = 0;
 		for (int j = 0; j < genome->traits->count; j++)
@@ -1966,7 +1933,7 @@ void Genome_Randomize_Traits(genome_t *genome)
 			curtrait = genome->traits->data[j];
 			if (curtrait->id == trait_num) break;
 		}
-		curgene->link->trait = curtrait;
+		curgene->trait = curtrait;
 	}
 }
 */
@@ -1976,7 +1943,7 @@ void Genome_Node_Insert(genome_t *genome, vector *nlist, neuron_t *n)
 	for (int i = 0; i < nlist->count; i++)
 	{
 		neuron_t* curnode = nlist->data[i];
-		if (curnode->node_id >= n->node_id) 
+		if (curnode->id >= n->id) 
 			vector_insert(nlist, i, n);
 	}
 }
@@ -1993,7 +1960,7 @@ void Genome_Add_Gene(genome_t *genome, vector *glist, gene_t *g)
 
 void Genome_FPrint(genome_t* genome, FILE *f)
 {
-	fprintf(f, "gnome_s %d %f %f %f %f\n", genome->ID, genome->fitness, genome->final_pos[0], genome->final_pos[1], genome->final_pos[2]);
+	fprintf(f, "gnome_s %d %f %f %f %f\n", genome->id, genome->fitness, genome->final_pos[0], genome->final_pos[1], genome->final_pos[2]);
 
 	for (int i = 0; i < genome->neurons->count; i++)
 		Neuron_FPrint(genome->neurons->data[i], f);
@@ -2001,5 +1968,5 @@ void Genome_FPrint(genome_t* genome, FILE *f)
 	for (int i = 0; i < genome->genes->count; i++)
 		Gene_FPrint(genome->genes->data[i], f);
 
-	fprintf(f, "gnome_e %d\n\n", genome->ID);
+	fprintf(f, "gnome_e %d\n\n", genome->id);
 }

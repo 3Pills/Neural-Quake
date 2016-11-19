@@ -309,12 +309,12 @@ void NQ_Start(lparse_t *line)
 		vector_clear(distStorage);
 
 	if (outputs == 0)
-	{
+	{ 
 		outputs = malloc(sizeof(outputs)*NQ_OUTPUT_COUNT);
 		memset(outputs, 0, NQ_OUTPUT_COUNT * sizeof(double*));
 	}
 
-	Con_Printf("   Building UI Graph Data\n");
+	Con_Printf("  Building UI Graph Data\n");
 
 	if (uinodes == 0)
 	{
@@ -447,7 +447,7 @@ void NQ_Start(lparse_t *line)
 	// Initialize hidden / bias node positions and represent their neural links. 
 	UI_RefreshGraph(organism);
 
-	Network_Flush(network);
+	// Network_Flush(network);
 
 	Con_Printf("Neural population initialized\n");
 
@@ -732,10 +732,10 @@ void NQ_Evaluate(organism_t* organism)
 	{
 		uilink_t *uilink = uilinks->data[i];
 		gene_t *gene = uilink->gene;
-		uilink->opacity = !gene->enabled ? 0 : gene->link->inode->value == 0 ? 0.1 : 0.6;
+		uilink->opacity = !gene->enabled ? 0 : gene->inode->value == 0 ? 0.1 : 0.6;
 	}
 
-	Network_Flush(network);
+	//Network_Flush(network);
 
 	/***** FITNESS EVALUATION *****/
 
@@ -946,7 +946,7 @@ void Draw_NeuralGraph()
 		organism_t *organism = species->organisms->data[currOrganism];
 
 		// Draw all nodes in the network here.
-		if (uinodes != 0)
+		if (uinodes != 0 && uinodes->count > 0)
 		{
 			if (inputs != 0 && inputs->count > 0)
 			{
@@ -1065,9 +1065,9 @@ void UI_RefreshGraph(organism_t *organism)
 		gene_t *gene = organism->gnome->genes->data[i];
 		uilink_t *uilink = malloc(sizeof(uilink_t));
 
-		uilink->start = uinodes->data[gene->link->inode->node_id];
-		uilink->end = uinodes->data[gene->link->onode->node_id];
-		uilink->color = gene->link->weight > 0 ? 63 : gene->link->weight < 0 ? 79 : 7;
+		uilink->start = uinodes->data[gene->inode->id];
+		uilink->end = uinodes->data[gene->onode->id];
+		uilink->color = gene->weight > 0 ? 63 : gene->weight < 0 ? 79 : 7;
 		uilink->opacity = !gene->enabled ? 0.0 : 0.1;
 		uilink->gene = gene;
 

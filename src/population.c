@@ -638,7 +638,7 @@ cbool Population_Epoch(population_t *pop, int generation)
 			//Go through the organisms of the curspecies and add them to the master list
 			for (int j = 0; j < curspecies->organisms->count; j++)
 			{
-				((organism_t*)curspecies->organisms->data[j])->gnome->ID = orgcount++;
+				((organism_t*)curspecies->organisms->data[j])->gnome->id = orgcount++;
 				vector_add(pop->organisms, curspecies->organisms->data[j]);
 			}
 		}

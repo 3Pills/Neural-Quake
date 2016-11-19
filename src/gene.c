@@ -23,32 +23,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "neural_def.h"
 #include "quakedef.h"
 
-gene_t* Gene_Init(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum) 
+gene_t* Gene_Init(double w, neuron_t* inode, neuron_t* onode, double innov, double mnum)
 {
 	gene_t* gene = malloc(sizeof(gene_t));
 	if (gene == 0) return NULL;
 
-	gene->link = Link_Init(w, in_node, out_node, recurring);
+	gene->inode = inode;
+	gene->onode = onode;
 	gene->innovation_num = innov;
 	gene->mutation_num = mnum;
 	gene->enabled = true;
-	gene->frozen = false;
-
-	return gene;
-}
-
-// Construct a gene with a trait.
-//gene_t* Gene_Init_Trait(trait_t* trait, double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum)
-gene_t* Gene_Init_Trait(double w, neuron_t* in_node, neuron_t* out_node, cbool recurring, double innov, double mnum)
-{
-	gene_t* gene = malloc(sizeof(gene_t));
-	if (gene == 0) return NULL;
-
-	gene->link = Link_Init_Trait(w, in_node, out_node, recurring);
-	gene->innovation_num = innov;
-	gene->mutation_num = mnum;
-	gene->enabled = true;
-	gene->frozen = false;
 
 	return gene;
 }
@@ -58,11 +42,12 @@ gene_t* Gene_Init_Dupe(gene_t *g, neuron_t *inode, neuron_t *onode)
 	gene_t* gene = malloc(sizeof(gene_t));
 	if (gene == 0) return NULL;
 
-	gene->link = Link_Init_Trait(g->link->weight, inode, onode, g->link->recurrent);
+	gene->inode = inode;
+	gene->onode = onode;
+	gene->weight = g->weight;
 	gene->innovation_num = g->innovation_num;
 	gene->mutation_num = g->mutation_num;
 	gene->enabled = g->enabled;
-	gene->frozen = g->frozen;
 
 	return gene;
 }
@@ -73,11 +58,11 @@ gene_t* Gene_Init_Copy(gene_t* g)
 	gene_t* gene = malloc(sizeof(gene_t));
 	if (gene == 0) return NULL;
 
-	gene->link = Link_Init_Copy(g->link);
+	gene->inode				= g->inode;
+	gene->onode				= g->onode;
 	gene->innovation_num	= g->innovation_num;
 	gene->mutation_num		= g->mutation_num;
 	gene->enabled			= g->enabled;
-	gene->frozen			= g->frozen;
 
 	return gene;
 }
@@ -89,7 +74,6 @@ gene_t* Gene_Init_Load(char *argline, vector *nodes)
 	int inode_id;
 	int onode_id;
 	double weight;
-	cbool recurrent;
 	int innovation_num;
 	double mutation_num;
 	cbool enabled;
@@ -113,7 +97,7 @@ gene_t* Gene_Init_Load(char *argline, vector *nodes)
 	// Error handling.
 	if (curword == NULL)
 	{
-		Con_Printf("Error loading value from gene between node #%d and node #%d!\n", inode_id, onode_id);
+		Con_Printf("Error loading value from gene!\n");
 		return 0;
 	}
 
@@ -123,7 +107,7 @@ gene_t* Gene_Init_Load(char *argline, vector *nodes)
 	curword = strtok(NULL, " \n");
 	if (curword == NULL)
 	{
-		Con_Printf("Error loading value from gene between node #%d and node #%d!\n", inode_id, onode_id);
+		Con_Printf("Error loading value from gene between node #%d!\n", inode_id);
 		return 0;
 	}
 	sscanf(curword, "%d", &onode_id);
@@ -135,14 +119,6 @@ gene_t* Gene_Init_Load(char *argline, vector *nodes)
 		return 0;
 	}
 	sscanf(curword, "%lf", &weight);
-
-	curword = strtok(NULL, " \n");
-	if (curword == NULL)
-	{
-		Con_Printf("Error loading value from gene between node #%d and node #%d!\n", inode_id, onode_id);
-		return 0;
-	}
-	sscanf(curword, "%d", &recurrent);
 
 	curword = strtok(NULL, " \n");
 	if (curword == NULL)
@@ -172,31 +148,28 @@ gene_t* Gene_Init_Load(char *argline, vector *nodes)
 	if (gene == 0) return 0;
 
 	// Apply direct parameters.
+	gene->inode = 0;
+	gene->onode = 0;
 	gene->innovation_num = innovation_num;
 	gene->mutation_num = mutation_num;
 	gene->enabled = enabled;
-	gene->frozen = false;
+	gene->weight = weight;
 
 	// Find the nodes on either side of the gene, using the ids stored in the file.
-	neuron_t *inode = 0, *onode = 0;
 	for (int i = 0; i < nodes->count; i++)
 	{
 		neuron_t *curnode = nodes->data[i];
-		if (curnode->node_id == inode_id) inode = nodes->data[i];
-		if (curnode->node_id == onode_id) onode = nodes->data[i];
+		if (curnode->id == inode_id) gene->inode = nodes->data[i];
+		if (curnode->id == onode_id) gene->onode = nodes->data[i];
 
-		if (inode != 0 && onode != 0) break;
+		if (gene->inode != 0 && gene->onode != 0) break;
 	}
-
-	// Now we can make a link.
-	gene->link = Link_Init(weight, inode, onode, recurrent);
 
 	return gene;
 }
 
 void Gene_Delete(gene_t* gene)
 {
-	Link_Delete(gene->link);
 	free(gene);
 }
 
@@ -205,6 +178,6 @@ void Gene_FPrint(gene_t* gene, FILE *f)
 {
 	if (f == NULL) return;
 
-	fprintf(f, "g %i %i %f %i %d %f %i\n", gene->link->inode->node_id, gene->link->onode->node_id, 
-		gene->link->weight, gene->link->recurrent, gene->innovation_num, gene->mutation_num, gene->enabled);
+	fprintf(f, "g %i %i %f %i %d %f %i\n", gene->inode->id, gene->onode->id, 
+		gene->weight, gene->innovation_num, gene->mutation_num, gene->enabled);
 }

@@ -30,7 +30,7 @@ organism_t* Organism_Init(double fit, genome_t* g, int gen, const char* md)
 	organism->fitness = fit;
 	organism->orig_fitness = fit;
 	organism->gnome = g;
-	organism->net = Genome_Genesis(organism->gnome, organism->gnome->ID);
+	organism->net = Genome_Genesis(organism->gnome, organism->gnome->id);
 	organism->species = 0;  //Start it in no Species
 	organism->expected_offspring = 0;
 	organism->generation = gen;
@@ -98,7 +98,7 @@ void Organism_Delete(organism_t* org)
 void Organism_Update_Phenotype(organism_t* org)
 {
 	Network_Delete(org->net);
-	org->net = Genome_Genesis(org->gnome, org->gnome->ID);
+	org->net = Genome_Genesis(org->gnome, org->gnome->id);
 	org->modified = true;
 }
 
@@ -116,12 +116,12 @@ cbool Organism_Order_Orgs_By_Adjusted_Fit(organism_t *x, organism_t *y)
 cbool Organism_FPrint(organism_t* organism, FILE* f)
 {
 	if (organism->modified)
-		fprintf(f, "/* Organism #%d Fitness: %f Time: %d */\n", (organism->gnome)->ID, organism->fitness, organism->time_alive);
+		fprintf(f, "/* Organism #%d Fitness: %f Time: %d */\n", (organism->gnome)->id, organism->fitness, organism->time_alive);
 	else
 		fprintf(f, "/* %s */\n", organism->metadata);
 
 	//If it is a winner, mark it in a comment
-	if (organism->winner) fprintf(f, "/* ##------$ WINNER %d SPECIES #%d $------## */\n", organism->gnome->ID, organism->species->id);
+	if (organism->winner) fprintf(f, "/* ##------$ WINNER %d SPECIES #%d $------## */\n", organism->gnome->id, organism->species->id);
 
 	Genome_FPrint(organism->gnome, f);
 

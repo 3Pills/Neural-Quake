@@ -18,11 +18,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "neuron.h"
-#include "quakedef.h"
+#include "gene.h"
 #include "neural_def.h"
+#include "quakedef.h"
 #include <stdlib.h>
 
-neuron_t* Neuron_Init(enum nodetype_e type, int node_id)
+neuron_t* Neuron_Init(enum nodetype_e type, int id)
 {
 	neuron_t* neuron = malloc(sizeof(neuron_t));
 	if (neuron == 0) return ((void*)1);
@@ -35,12 +36,12 @@ neuron_t* Neuron_Init(enum nodetype_e type, int node_id)
 	neuron->last_activation2 = 0;
 	neuron->type = type; //NEURON or SENSOR type
 	neuron->activation_count = 0; //Inactive upon creation
-	neuron->node_id = node_id;
+	neuron->id = id;
 	neuron->fType = NQ_SIGMOID;
 	neuron->node_label = NQ_HIDDEN;
 	neuron->dupe = 0;
 	neuron->analogue = 0;
-	neuron->frozen = false;
+	//neuron->frozen = false;
 	//neuron->trait = 0;
 	//neuron->trait_id = 1;
 	neuron->override = false;
@@ -50,7 +51,7 @@ neuron_t* Neuron_Init(enum nodetype_e type, int node_id)
 	return neuron;
 }
 
-neuron_t* Neuron_Init_Placement(enum nodetype_e type, int node_id, enum nodeplace_e placement)
+neuron_t* Neuron_Init_Placement(enum nodetype_e type, int id, enum nodeplace_e placement)
 {
 	neuron_t* neuron = malloc(sizeof(neuron_t));
 	if (neuron == 0) return ((void*)1);
@@ -63,7 +64,7 @@ neuron_t* Neuron_Init_Placement(enum nodetype_e type, int node_id, enum nodeplac
 	neuron->last_activation2 = 0;
 	neuron->type = type; //NEURON or SENSOR type
 	neuron->activation_count = 0; //Inactive upon creation
-	neuron->node_id = node_id;
+	neuron->id = id;
 	neuron->fType = NQ_SIGMOID;
 	neuron->node_label = placement;
 	neuron->dupe = 0;
@@ -92,7 +93,7 @@ neuron_t* Neuron_Init_Derived(neuron_t* other)
 	neuron->last_activation2 = 0;
 	neuron->type = other->type; //NEURON or SENSOR type
 	neuron->activation_count = 0; //Inactive upon creation
-	neuron->node_id = other->node_id;
+	neuron->id = other->id;
 	neuron->fType = NQ_SIGMOID;
 	neuron->node_label = other->node_label;
 	neuron->dupe = 0;
@@ -121,7 +122,7 @@ neuron_t* Neuron_Init_Copy(neuron_t* other)
 	neuron->last_activation2	= other->last_activation2;
 	neuron->type				= other->type; //NEURON or SENSOR type
 	neuron->activation_count	= other->activation_count; //Inactive upon creation
-	neuron->node_id				= other->node_id;
+	neuron->id					= other->id;
 	neuron->fType				= other->fType;
 	neuron->node_label			= other->node_label;
 	neuron->dupe				= other->dupe;
@@ -186,10 +187,8 @@ double Neuron_Get_Active_Out_TD(neuron_t* node)
 void Neuron_Delete(neuron_t* node)
 {
 	for (int i = 0; i < node->ilinks->count; i++)
-	{
-		Link_Delete(node->ilinks->data[i]);
-	}
-	//Trait_Delete(node->trait);
+		Gene_Delete(node->ilinks->data[i]);
+
 	free(node);
 }
 
@@ -208,21 +207,22 @@ cbool Neuron_Sensor_Load(neuron_t* node, double value)
 	return false;
 }
 
+/*
 void Neuron_Add_Incoming_Recurring(neuron_t* node, neuron_t* other, double w, cbool recur)
 {
-	nlink_t* newlink = Link_Init(w, other, node, recur);
+	gene_t* newlink = Link_Init(w, other, node, recur);
 	vector_add(node->ilinks, newlink);
 	vector_add(other->olinks, newlink);
 }
 
 void Neuron_Add_Incoming(neuron_t* node, neuron_t* other, double w)
 {
-	nlink_t* newlink = Link_Init(w, other, node, false);
+	gene_t* newlink = Link_Init(w, other, node, false);
 	vector_add(node->ilinks, newlink);
 	vector_add(other->olinks, newlink);
 }
 
-
+/*
 void Neuron_Flushback(neuron_t* node)
 {
 	if (node->type != NQ_SENSOR)
@@ -237,8 +237,8 @@ void Neuron_Flushback(neuron_t* node)
 
 		for (int i = 0; i < node->ilinks->count; i++)
 		{
-			nlink_t* curlink = node->ilinks->data[i];
-			curlink->added_weight = 0;
+			gene_t* curlink = node->ilinks->data[i];
+			//curlink->added_weight = 0;
 			if (curlink->inode->activation_count > 0)
 				Neuron_Flushback(curlink->inode);
 		}
@@ -256,19 +256,19 @@ void Neuron_Flushback_Check(neuron_t* node, vector* seenlist)
 {
 	if (node->activation_count > 0)
 	{
-		printf("ALERT: Node %d has activation count %d\n", node->node_id, node->activation_count);
+		printf("ALERT: Node %d has activation count %d\n", node->id, node->activation_count);
 	}
 	if (node->activation > 0)
 	{
-		printf("ALERT: Node %d has activation %d\n", node->node_id, node->activation);
+		printf("ALERT: Node %d has activation %d\n", node->id, node->activation);
 	}
 	if (node->last_activation > 0)
 	{
-		printf("ALERT: Node %d has last_activation %d\n", node->node_id, node->last_activation);
+		printf("ALERT: Node %d has last_activation %d\n", node->id, node->last_activation);
 	}
 	if (node->last_activation2 > 0)
 	{
-		printf("ALERT: Node %d has last_activation2 %d\n", node->node_id, node->last_activation2);
+		printf("ALERT: Node %d has last_activation2 %d\n", node->id, node->last_activation2);
 	}
 
 	if (!(node->type == NQ_SENSOR)) {
@@ -276,7 +276,7 @@ void Neuron_Flushback_Check(neuron_t* node, vector* seenlist)
 		for (int i = 0; i < node->ilinks->count; i++)
 		{
 			neuron_t* location = 0;
-			nlink_t* curlink = node->ilinks->data[i];
+			gene_t* curlink = node->ilinks->data[i];
 			for (int j = 0; j < seenlist->count; j++)
 			{
 				if (seenlist->data[j] == curlink->inode)
@@ -337,7 +337,7 @@ int Neuron_Depth(neuron_t* node, int d, network_t* net)
 
 	for (int i = 0; i < node->ilinks->count; i++)
 	{
-		nlink_t* curlink = node->ilinks->data[i];
+		gene_t* curlink = node->ilinks->data[i];
 		int cur_depth = Neuron_Depth(curlink->inode, d + 1, net);
 		if (cur_depth > max) max = cur_depth;
 	}
@@ -347,5 +347,5 @@ int Neuron_Depth(neuron_t* node, int d, network_t* net)
 
 void Neuron_FPrint(neuron_t *node, FILE *f)
 {
-	fprintf(f, "n %d %d %d\n", node->node_id, node->type, node->node_label);
+	fprintf(f, "n %d %d %d\n", node->id, node->type, node->node_label);
 }

@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define __NETWORK_H__
 
 #include "neuron.h"
-#include "vector.h"
 
 typedef struct genome_s genome_t;
 
@@ -34,12 +33,11 @@ typedef struct network_s
 	vector* outputs; // Contains: neuron_t. Values output by the network.
 
 	vector* all_nodes;  // A list of all the nodes
-	neuron_t* input_ptr;  // For GUILE network inputting  
 
 	int numnodes; // The number of nodes in the net (-1 means not yet counted)
 	int numlinks; //The number of links in the net (-1 means not yet counted)
 
-	int net_id; // Allow for a network id
+	int id; // Allow for a network id
 
 	double maxweight; // Maximum weight in network for adaptation purposes
 
@@ -69,11 +67,13 @@ void Network_Destroy_Helper(network_t* network, neuron_t *curnode, vector* seenl
 // Apply a name to the specified network.
 void Network_Give_Name(network_t *network, char *newname);
 
+/*
 // Puts the network back into an inactive state
 void Network_Flush(network_t* network);
 
 // Verify flushedness for debugging
 void Network_Flush_Check(network_t* network);
+*/
 
 // Activates the net such that all outputs are active
 cbool Network_Activate(network_t* network);
@@ -109,11 +109,13 @@ void Network_Link_Count_Helper(network_t* network, neuron_t *curnode, int *count
 // This checks a POTENTIAL link between a potential in_node
 // and potential out_node to see if it must be recurrent 
 // Use count and thresh to jump out in the case of an infinite loop 
-cbool Network_Is_Recur(network_t* network, neuron_t *potin_node, neuron_t *potout_node, int *count, int thresh);
+//cbool Network_Is_Recur(network_t* network, neuron_t *potin_node, neuron_t *potout_node, int *count, int thresh);
 
-// Some functions to help GUILE input into Networks   
+// Some functions to help GUILE input into Networks 
+/*
 int Network_Input_Start(network_t* network);
 int Network_Load_In(network_t* network, double d);
+*/
 
 // If all output are not active then return true
 cbool Network_Outputs_Off(network_t* network);

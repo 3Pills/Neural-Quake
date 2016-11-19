@@ -16,10 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-*/
 #ifndef __TRAIT_H__
 #define __TRAIT_H__
-/*
 
 typedef struct trait_s
 {
@@ -44,5 +42,5 @@ trait_t *Trait_Init_Merge(trait_t* t1, trait_t* t2);
 void Trait_Delete(trait_t* trait);
 
 void Trait_Mutate(trait_t* trait); // Perturb trait parameters slightly.
-*/
 #endif // !__TRAIT_H__
+*/

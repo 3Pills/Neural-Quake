@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "genome.h"
 #include "species.h"
 
+
 typedef struct species_s species_t;
 typedef struct network_s network_t;
 

@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "species.h"
+#include "network.h"
 #include "neural.h"
 #include "neural_def.h"
 #include <math.h>
@@ -444,7 +445,7 @@ cbool Species_Reproduce(species_t *species, int generation, population_t* pop, v
 
 			//Determine whether to mutate the baby's Genome
 			//This is done randomly or if the mom and dad are the same organism
-			if (Random_Float() > NQ_MATE_ONLY_PROB || dad->gnome->ID == mom->gnome->ID || Genome_Compatibility(dad->gnome, mom->gnome) == 0.0)
+			if (Random_Float() > NQ_MATE_ONLY_PROB || dad->gnome->id == mom->gnome->id || Genome_Compatibility(dad->gnome, mom->gnome) == 0.0)
 			{
 
 				//Do the mutation depending on probabilities of 

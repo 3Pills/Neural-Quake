@@ -18,12 +18,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "network.h"
+#include "gene.h"
 #include "neural.h"
 #include "neural_def.h"
 #include <string.h>
 
 // This constructor allows the input and output lists to be supplied. Defaults to not using adaptation.
-network_t* Network_Init(vector* in, vector* out, vector* all, int netID)
+network_t* Network_Init(vector* in, vector* out, vector* all, int id)
 {
 	network_t* network = malloc(sizeof(network_t));
 
@@ -33,14 +34,14 @@ network_t* Network_Init(vector* in, vector* out, vector* all, int netID)
 	network->name = 0;
 	network->numnodes = -1;
 	network->numlinks = -1;
-	network->net_id = netID;
+	network->id = id;
 	network->adaptable = false;
 
 	return network;
 }
 
 // Same as previous constructor except the adaptibility can be set true or false with adaptval.
-network_t* Network_Init_Adaptable(vector* in, vector* out, vector* all, int netID, cbool adaptVal)
+network_t* Network_Init_Adaptable(vector* in, vector* out, vector* all, int id, cbool adaptVal)
 {
 	network_t* network = malloc(sizeof(network_t));
 
@@ -50,7 +51,7 @@ network_t* Network_Init_Adaptable(vector* in, vector* out, vector* all, int netI
 	network->name = 0;
 	network->numnodes = -1;
 	network->numlinks = -1;
-	network->net_id = netID;
+	network->id = id;
 	network->adaptable = adaptVal;
 
 	return network;
@@ -58,7 +59,7 @@ network_t* Network_Init_Adaptable(vector* in, vector* out, vector* all, int netI
 
 
 // This constructs a net with empty input and output lists.
-network_t* Network_Init_Empty(int netID)
+network_t* Network_Init_Empty(int id)
 {
 	network_t* network = malloc(sizeof(network_t));
 
@@ -68,7 +69,7 @@ network_t* Network_Init_Empty(int netID)
 	network->name = 0;
 	network->numnodes = -1;
 	network->numlinks = -1;
-	network->net_id = netID;
+	network->id = id;
 	network->adaptable = false;
 
 	return network;
@@ -76,7 +77,7 @@ network_t* Network_Init_Empty(int netID)
 
 
 // Same as previous constructor except the adaptibility can be set true or false with adaptval.
-network_t* Network_Init_Empty_Adaptable(int netID, cbool adaptVal)
+network_t* Network_Init_Empty_Adaptable(int id, cbool adaptVal)
 {
 	network_t* network = malloc(sizeof(network_t));
 
@@ -86,7 +87,7 @@ network_t* Network_Init_Empty_Adaptable(int netID, cbool adaptVal)
 	network->name = 0;
 	network->numnodes = -1;
 	network->numlinks = -1;
-	network->net_id = netID;
+	network->id = id;
 	network->adaptable = adaptVal;
 
 	return network;
@@ -118,7 +119,7 @@ network_t* Network_Init_Copy(network_t* n)
 
 	network->numnodes = n->numnodes;
 	network->numlinks = n->numlinks;
-	network->net_id = n->net_id;
+	network->id = n->id;
 	network->adaptable = n->adaptable;
 
 	return network;
@@ -143,16 +144,14 @@ void Network_Destroy(network_t* network)
 
 void Network_Destroy_Helper(network_t* network, neuron_t *curnode, vector* seenlist)
 {
-	vector* innodes = curnode->ilinks;
-
 	if (!((curnode->type) == NQ_SENSOR)) {
-		for (int i = 0; i < innodes->count; i++)
+		for (int i = 0; i < curnode->ilinks->count; i++)
 		{
-			nlink_t *curlink = innodes->data[i];
+			gene_t *gene = curnode->ilinks->data[i];
 			neuron_t *location = 0;
 			for (int j = 0; j < seenlist->count; j++)
 			{
-				if (seenlist->data[j] == curlink->inode)
+				if (seenlist->data[j] == gene->inode)
 				{
 					location = seenlist->data[j];
 					break;
@@ -160,8 +159,8 @@ void Network_Destroy_Helper(network_t* network, neuron_t *curnode, vector* seenl
 			}
 			if (location == 0)
 			{
-				vector_add(seenlist, curlink->inode);
-				Network_Destroy_Helper(network, curlink->inode, seenlist);
+				vector_add(seenlist, gene->inode);
+				Network_Destroy_Helper(network, gene->inode, seenlist);
 			}
 		}
 	}
@@ -176,14 +175,13 @@ void Network_Give_Name(network_t *network, char *newname)
 
 	strcpy(network->name, newname);
 }
-
+/*
 // Puts the network back into an inactive state
 void Network_Flush(network_t* network)
 {
 	for (int i = 0; i < network->outputs->count; i++)
 		Neuron_Flushback(network->outputs->data[i]);
 }
-
 // Verify flushedness for debugging
 void Network_Flush_Check(network_t* network)
 {
@@ -207,6 +205,7 @@ void Network_Flush_Check(network_t* network)
 		}
 	}
 }
+*/
 
 // Activates the net such that all outputs are active
 cbool Network_Activate(network_t* network)
@@ -236,18 +235,13 @@ cbool Network_Activate(network_t* network)
 				for (int j = 0; j < curnode->ilinks->count; j++)
 				{
 					double add_amount = 0.0;
-					nlink_t* curlink = curnode->ilinks->data[j];
+					gene_t* gene = curnode->ilinks->data[j];
 
 					//Handle possible time delays
-					if (!curlink->time_delay)
-					{
-						add_amount = curlink->weight * Neuron_Get_Active_Out(curlink->inode);
-						if (curlink->inode->active_flag || curlink->inode->type == NQ_SENSOR) curnode->active_flag = true;
-					}
-					else
-					{
-						add_amount = curlink->weight * Neuron_Get_Active_Out_TD(curlink->inode);
-					}
+					
+					add_amount = gene->weight * Neuron_Get_Active_Out(gene->inode);
+					if (gene->inode->active_flag || gene->inode->type == NQ_SENSOR) curnode->active_flag = true;
+
 					curnode->activesum += add_amount;
 				}
 			}
@@ -390,11 +384,11 @@ void Network_Node_Count_Helper(network_t* network, neuron_t *curnode, int *count
 	{
 		for (int i = 0; i < curnode->ilinks->count; i++)
 		{
-			nlink_t *curlink = curnode->ilinks->data[i];
+			gene_t *gene = curnode->ilinks->data[i];
 			neuron_t *location = 0;
 			for (int j = 0; j < seenlist->count; j++)
 			{
-				if (seenlist->data[j] == curlink->inode)
+				if (seenlist->data[j] == gene->inode)
 				{
 					location = seenlist->data[j];
 					break;
@@ -403,8 +397,8 @@ void Network_Node_Count_Helper(network_t* network, neuron_t *curnode, int *count
 			if (location == 0)
 			{
 				(*counter)++;
-				vector_add(seenlist, curlink->inode);
-				Network_Node_Count_Helper(network, curlink->inode, counter, seenlist);
+				vector_add(seenlist, gene->inode);
+				Network_Node_Count_Helper(network, gene->inode, counter, seenlist);
 			}
 		}
 	}
@@ -442,7 +436,7 @@ void Network_Link_Count_Helper(network_t* network, neuron_t *curnode, int *count
 		for (int i = 0; i < curnode->ilinks->count; i++)
 		{
 			counter++;
-			Network_Link_Count_Helper(network, ((nlink_t*)curnode->ilinks->data[i])->inode, counter, seenlist);
+			Network_Link_Count_Helper(network, ((gene_t*)curnode->ilinks->data[i])->inode, counter, seenlist);
 		}
 	}
 }
@@ -450,6 +444,7 @@ void Network_Link_Count_Helper(network_t* network, neuron_t *curnode, int *count
 // This checks a POTENTIAL link between a potential in_node
 // and potential out_node to see if it must be recurrent 
 // Use count and thresh to jump out in the case of an infinite loop 
+/*
 cbool Network_Is_Recur(network_t* network, neuron_t *potin_node, neuron_t *potout_node, int *count, int thresh)
 {
 	(*count)++;
@@ -458,25 +453,28 @@ cbool Network_Is_Recur(network_t* network, neuron_t *potin_node, neuron_t *potou
 
 	for (int i = 0; i < potin_node->ilinks->count; i++)
 	{
-		nlink_t* curlink = potin_node->ilinks->data[i];
-		if (curlink->recurrent)
-			if (Network_Is_Recur(network, curlink->inode, potout_node, count, thresh))
+		gene_t* gene = potin_node->ilinks->data[i];
+		if (gene->recurrent)
+			if (Network_Is_Recur(network, gene->inode, potout_node, count, thresh))
 				return true;
 	}
 
 	return false;
 }
+*/
 
+/*
 int Network_Input_Start(network_t* network)
 {
-	network->input_ptr = network->inputs->data[0];
+	network-> = network->inputs->data[0];
 	return 1;
 }
 
 int Network_Load_In(network_t* network, double d)
 {
-	return Neuron_Sensor_Load(network->input_ptr, d) ? 1 : 0;
+	return Neuron_Sensor_Load(network, d) ? 1 : 0;
 }
+*/
 
 // If all output are not active then return true
 cbool Network_Outputs_Off(network_t* network)

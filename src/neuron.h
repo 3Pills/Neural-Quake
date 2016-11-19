@@ -20,8 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __NEURON_H__
 #define __NEURON_H__
 #include "environment.h"
-#include "gene.h"
 #include "vector.h"
+#include <stdio.h>
 
 // The type of node.
 enum nodetype_e {
@@ -43,8 +43,8 @@ enum functype_e {
 	NQ_SIGMOID = 0
 };
 
-typedef struct nlink_s nlink_t;
 typedef struct network_s network_t;
+typedef struct neuron_s neuron_t;
 
 typedef struct neuron_s
 {
@@ -61,8 +61,8 @@ typedef struct neuron_s
 	cbool override; // The NNode cannot compute its own output- something is overriding it
 	double override_value; // Contains the activation value that will override this node's activation
 
-	vector* olinks; // Contains: nlink_t. Vector array of outgoing Links.
-	vector* ilinks; // Contains: nlink_t. Vector array of incoming Links.
+	vector* olinks; // Contains: gene_t. Vector array of outgoing genes.
+	vector* ilinks; // Contains: gene_t. Vector array of incoming genes.
 
 	int value; // The Value output by the Neuron.
 
@@ -77,7 +77,7 @@ typedef struct neuron_s
 
 	//double params[NQ_TRAIT_NUM_PARAMS];
 
-	int node_id; // Identification for file output
+	int id; // Identification for file output
 	enum nodeplace_e node_label;
 } neuron_t; // Genetic nodes which make up a neural network
 
@@ -113,11 +113,13 @@ void Neuron_Add_Incoming_Recurring(neuron_t* node, neuron_t* other, double w, cb
 // Adds a NONRECURRENT Link to a new NNode in the incoming List
 void Neuron_Add_Incoming(neuron_t* node, neuron_t* other, double w);
 
+/*
 // Recursively deactivate backwards through the network
 void Neuron_Flushback(neuron_t* node);
 
 // Verify flushing for debugging
 void Neuron_Flushback_Check(neuron_t* node, vector* seenlist);
+*/
 
 // Have Neuron gain its properties from the trait
 //void Neuron_Derive_Trait(neuron_t* node, trait_t *curtrait);

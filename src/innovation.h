@@ -39,7 +39,7 @@ typedef struct innovation_s
 	int innovation_num2;
 
 	double new_weight;
-	int new_trait_num;
+	//int new_trait_num;
 	int new_node_id;
 
 	double old_innov_num;
