@@ -20,12 +20,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "population.h"
 
 #include "neural.h"
+#include "neural_def.h"
 #include "vector.h"
 #include "genome.h"
 #include "species.h"
 #include "organism.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 population_t *Population_Init(genome_t *g, int size)
 {

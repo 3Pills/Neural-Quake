@@ -105,8 +105,8 @@ cbool Network_Outputs_Off(network_t* network);
 
 // Just print connections weights with carriage returns
 void Network_Print_Links_To_File(network_t* network, char *filename);
+*/
 
 int Network_Max_Depth(network_t* network);
-*/
 
 #endif // !__NETWORK_H__

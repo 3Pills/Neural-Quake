@@ -50,13 +50,15 @@ void vector_add(vector *v, void *e)
 
 void vector_insert(vector *v, int index, void *e)
 {
+	if (v->size == 0) {
+		v->size = 10;
+		v->data = calloc(v->size, sizeof(void*));
+	}
+
 	if (index >= v->count)
 	{
 		if (v->size <= index + 1)
 		{
-			if (v->size == 0) 
-				v->size = 2;
-
 			while (v->size <= index + 1)
 				v->size *= 2;
 

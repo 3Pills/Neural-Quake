@@ -748,7 +748,10 @@ void NQ_Evaluate(organism_t* organism)
 
 	// Take the value of each output in the network into the global output vector for use with inputs.
 	for (int i = network->genotype->num_in; i < network->genotype->num_in + network->genotype->num_out; i++)
+	{
+		int index = i - network->genotype->num_in; // MEMORY OVERWRITE IS OCCURRING HERE. FIND OUT WHY.
 		outputs[i - network->genotype->num_in] = ((neuron_t*)network->neurons->data[i])->value;
+	}
 
 	for (int i = 0; i < uilinks->count; i++)
 	{
@@ -1054,9 +1057,8 @@ void UI_RefreshGraph(organism_t *organism)
 
 		if (i >= organism->net->genotype->num_in + organism->net->genotype->num_out)
 		{
-
-			int x = ((i - (NQ_INPUT_COUNT + NQ_OUTPUT_COUNT)) % NQ_INPUT_COLS),
-				y = (i - (NQ_INPUT_COUNT + NQ_OUTPUT_COUNT + 1)) / NQ_INPUT_COLS;
+			int x = ((i - (organism->net->genotype->num_in + organism->net->genotype->num_out)) % NQ_INPUT_COLS),
+				y = (i - (organism->net->genotype->num_in + organism->net->genotype->num_out + 1)) / NQ_INPUT_COLS;
 
 			uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_BOX_PADDING + x * NQ_GRAPH_INBOX_WIDTH;
 			uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_HIDDEN_HEIGHT + NQ_GRAPH_BOX_PADDING + y * NQ_GRAPH_INBOX_HEIGHT;

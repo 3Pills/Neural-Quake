@@ -20,6 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "genome.h"
 #include "network.h"
 #include "neural.h"
+#include "neural_def.h"
+#include <string.h>
 
 //Constructor which takes full genome specs and puts them into the new one
 genome_t* Genome_Init(int id, vector* neurons, vector* genes)
@@ -828,6 +830,7 @@ cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, i
 		for (int i = 0; i < genome->genes->count; i++) 
 		{
 			gene = genome->genes->data[i];
+			// - 1 from num_in to ignore the bias node. We don't want a mutation of 1!
 			if (gene->enabled && gene->inode != genome->num_in - 1)
 			{
 				for (int j = i; j < genome->genes->count; j++)
@@ -1444,7 +1447,7 @@ genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomei
 		}
 
 		//Now add the chosengene to the baby
-		if (!skip)
+		if (!skip && chosengene != NULL)
 		{
 			//Next check for the nodes, add them if not in the baby Genome already.
 			if (newnodes->count <= chosengene->inode)

@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "species.h"
 
 #include "neural.h"
-
+#include "neural_def.h"
 #include "vector.h"
 #include "organism.h"
 #include "population.h"
