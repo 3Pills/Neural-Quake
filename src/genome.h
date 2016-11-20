@@ -22,9 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifndef __GENOME_H__
 #define __GENOME_H__
-#include "gene.h"
-#include "innovation.h"
-#include "math_vector.h"
+
+#include "math_vector.h" //vec3_t
+#include "neuron.h"
 
 //Describes the type of mutator to be appplied during link mutations.
 enum mutator_e {
@@ -32,6 +32,7 @@ enum mutator_e {
 	NQ_COLDGAUSSIAN = 1
 };
 
+// Forward declaration of network_t.
 typedef struct network_s network_t;
 
 typedef struct genome_s
@@ -40,8 +41,10 @@ typedef struct genome_s
 	int fitness; // Determined fitness of the Genome.
 	vec3_t final_pos; // Final position of the genome before evaluation finished.
 
-	//vector* traits; // Contains: trait_t*. Array of Traits within the genome.
-	vector* neurons; // Contains: neuron_t*. Array of Neurons within the genome.
+	int num_in;
+	int num_out;
+
+	vector* neurons; // Contains: neuron_t*. Represents the structure of nodes within the genome.
 	vector* genes; // Contains: gene_t*. Array of Genes within the genome.
 
 	network_t* phenotype;
@@ -51,11 +54,14 @@ typedef struct genome_s
 //Constructor which takes full genome specs and puts them into the new one
 genome_t* Genome_Init(int id, vector* nodes, vector* genes);
 
+//Constructor which takes full genome specs and puts them into the new one
+genome_t* Genome_Init_Empty();
+
 //Constructor which takes in links (not genes) and creates a Genome
 genome_t* Genome_Init_Links(int id, vector* nodes, vector* links);
 
-// Copy constructor
-genome_t* Genome_Init_Copy(genome_t* other);
+// Duplicate a Genome to create a new one with the specified id.
+genome_t* Genome_Duplicate(genome_t *genome, int new_id);
 
 // Constructor which spawns off an input file
 // Called from Population_Init_Load.
@@ -90,9 +96,6 @@ network_t* Genome_Genesis(genome_t *genome, int id);
 
 // Wrapper for print_to_file above
 //void print_to_filename(char *filename);
-
-// Duplicate a Genome to create a new one with the specified id.
-genome_t* Genome_Duplicate(genome_t *genome, int new_id);
 
 // For debug: A number of tests can be run on a genome to check its integrity
 // Note: Some of these tests do not indicate a bug, but rather are meant
@@ -131,12 +134,12 @@ void Genome_Mutate_Gene_Reenable(genome_t *genome);
 //   Generally, if they fail, they can be called again if desired. 
 
 // Mutate genome by adding a node respresentation 
-cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, double curinnov);
+cbool Genome_Mutate_Add_Node(genome_t *genome, vector *innovs, int curnode_id, int curinnov);
 
 // Mutate the genome by adding a new link between 2 random NNodes 
-cbool Genome_Mutate_Add_Link(genome_t *genome, vector *innovs, double curinnov, int tries);
+cbool Genome_Mutate_Add_Link(genome_t *genome, vector *innovs, int curinnov, int tries);
 
-void Genome_Mutate_Add_Sensor(genome_t *genome, vector *innovs, double curinnov);
+//void Genome_Mutate_Add_Sensor(genome_t *genome, vector *innovs, int curinnov);
 
 // ****** MATING METHODS ***** 
 // These methods are within genetic algorithm implementations.
@@ -161,6 +164,7 @@ genome_t *Genome_Mate_Multipoint_Avg(genome_t *genome, genome_t *other, int geno
 //   with the bigger one.  
 genome_t *Genome_Mate_Singlepoint(genome_t *genome, genome_t *other, int genomeid);
 
+genome_t *Genome_Mate_Crossover(genome_t *x, genome_t *y);
 
 // ******** COMPATIBILITY CHECKING METHODS ********
 
@@ -193,5 +197,8 @@ void Genome_Add_Gene(genome_t *genome, vector *glist, gene_t *g);
 
 // Print genome to a file.
 void Genome_FPrint(genome_t* gene, FILE *f);
+
+// Quicksort function for genes in the genome.
+cbool Genome_Quicksort_Genes(gene_t* x, gene_t* y);
 
 #endif // !__GENOME_H__

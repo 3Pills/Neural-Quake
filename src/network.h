@@ -20,54 +20,39 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __NETWORK_H__
 #define __NETWORK_H__
 
-#include "neuron.h"
-
-typedef struct genome_s genome_t;
+#include "genome.h"
 
 typedef struct network_s
 {
 	genome_t* genotype;  // Allows Network to be matched with its Genome
+	vector* neurons;  // A list of all the nodes.
 
-	char *name; // Every Network or subNetwork can have a name
-	vector* inputs;  // Contains: neuron_t. Neurons input into the network.
-	vector* outputs; // Contains: neuron_t. Values output by the network.
-
-	vector* all_nodes;  // A list of all the nodes
-
-	int numnodes; // The number of nodes in the net (-1 means not yet counted)
-	int numlinks; //The number of links in the net (-1 means not yet counted)
-
-	int id; // Allow for a network id
-
-	double maxweight; // Maximum weight in network for adaptation purposes
-
-	cbool adaptable; // Tells whether network can adapt or not
 } network_t; // The entire pool of species.
 
 // This constructor allows the input and output lists to be supplied. Defaults to not using adaptation.
-network_t* Network_Init(vector* in, vector* out, vector* all, int netID);
+network_t* Network_Init(vector* neurons);
 
-// Same as previous constructor except the adaptibility can be set true or false with adaptval.
-network_t* Network_Init_Adaptable(vector* in, vector* out, vector* all, int netID, cbool adaptVal);
-
-// This constructs a net with empty input and output lists.
-network_t* Network_Init_Empty(int netID);
-
-// Same as previous constructor except the adaptibility can be set true or false with adaptval.
-network_t* Network_Init_Empty_Adaptable(int netID, cbool adaptVal);
-
+//// Same as previous constructor except the adaptibility can be set true or false with adaptval.
+//network_t* Network_Init_Adaptable(vector* in, vector* out, vector* all, int netID, cbool adaptVal);
+//
+//// This constructs a net with empty input and output lists.
+//network_t* Network_Init_Empty(int netID);
+//
+//// Same as previous constructor except the adaptibility can be set true or false with adaptval.
+//network_t* Network_Init_Empty_Adaptable(int netID, cbool adaptVal);
+//
 // Copy Constructor
 network_t* Network_Init_Copy(network_t* n);
 
 void Network_Delete(network_t* network);
 
+/*
 void Network_Destroy(network_t* network);  // Kills all nodes and links within
 void Network_Destroy_Helper(network_t* network, neuron_t *curnode, vector* seenlist); // helper for above
 
 // Apply a name to the specified network.
 void Network_Give_Name(network_t *network, char *newname);
 
-/*
 // Puts the network back into an inactive state
 void Network_Flush(network_t* network);
 
@@ -78,6 +63,9 @@ void Network_Flush_Check(network_t* network);
 // Activates the net such that all outputs are active
 cbool Network_Activate(network_t* network);
 
+// Takes an array of sensor values and loads it into SENSOR inputs ONLY
+void Network_Load_Sensors(network_t* network, double* sensvals);
+/*
 // Prints the values of its outputs
 void Network_Show_Activation(network_t* network);
 
@@ -88,10 +76,6 @@ void Network_Add_Input(network_t* network, neuron_t* neuron);
 
 // Add a new output node
 void Network_Add_Output(network_t* network, neuron_t* neuron);
-
-// Takes an array of sensor values and loads it into SENSOR inputs ONLY
-void Network_Load_Sensors(network_t* network, double* sensvals);
-void Network_Load_Sensors_Vector(network_t* network, vector* sensvals);
 
 // Takes and array of output activations and OVERRIDES the outputs' actual 
 // activations with these values (for adaptation)
@@ -115,7 +99,6 @@ void Network_Link_Count_Helper(network_t* network, neuron_t *curnode, int *count
 /*
 int Network_Input_Start(network_t* network);
 int Network_Load_In(network_t* network, double d);
-*/
 
 // If all output are not active then return true
 cbool Network_Outputs_Off(network_t* network);
@@ -124,5 +107,6 @@ cbool Network_Outputs_Off(network_t* network);
 void Network_Print_Links_To_File(network_t* network, char *filename);
 
 int Network_Max_Depth(network_t* network);
+*/
 
 #endif // !__NETWORK_H__

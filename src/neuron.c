@@ -23,120 +23,31 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include <stdlib.h>
 
-neuron_t* Neuron_Init(enum nodetype_e type, int id)
+neuron_t* Neuron_Init()
 {
 	neuron_t* neuron = malloc(sizeof(neuron_t));
 	if (neuron == 0) return ((void*)1);
 
-	neuron->active_flag = false;
-	neuron->activesum = 0;
-	neuron->activation = 0;
 	neuron->value = 0;
-	neuron->last_activation = 0;
-	neuron->last_activation2 = 0;
-	neuron->type = type; //NEURON or SENSOR type
-	neuron->activation_count = 0; //Inactive upon creation
-	neuron->id = id;
-	neuron->fType = NQ_SIGMOID;
-	neuron->node_label = NQ_HIDDEN;
-	neuron->dupe = 0;
-	neuron->analogue = 0;
-	//neuron->frozen = false;
-	//neuron->trait = 0;
-	//neuron->trait_id = 1;
-	neuron->override = false;
 	neuron->ilinks = vector_init();
 	neuron->olinks = vector_init();
 
 	return neuron;
 }
 
-neuron_t* Neuron_Init_Placement(enum nodetype_e type, int id, enum nodeplace_e placement)
-{
-	neuron_t* neuron = malloc(sizeof(neuron_t));
-	if (neuron == 0) return ((void*)1);
-
-	neuron->active_flag = false;
-	neuron->activesum = 0;
-	neuron->activation = 0;
-	neuron->value = 0;
-	neuron->last_activation = 0;
-	neuron->last_activation2 = 0;
-	neuron->type = type; //NEURON or SENSOR type
-	neuron->activation_count = 0; //Inactive upon creation
-	neuron->id = id;
-	neuron->fType = NQ_SIGMOID;
-	neuron->node_label = placement;
-	neuron->dupe = 0;
-	neuron->analogue = 0;
-	neuron->frozen = false;
-	//neuron->trait = 0;
-	//neuron->trait_id = 1;
-	neuron->override = false;
-	neuron->ilinks = vector_init();
-	neuron->olinks = vector_init();
-
-	return neuron;
-}
-
-// Construct a node using another as a base, for genome purposes.
 neuron_t* Neuron_Init_Derived(neuron_t* other)
 {
 	neuron_t* neuron = malloc(sizeof(neuron_t));
 	if (neuron == 0) return ((void*)1);
 
-	neuron->active_flag = false;
-	neuron->activesum = 0;
-	neuron->activation = 0;
-	neuron->value = 0;
-	neuron->last_activation = 0;
-	neuron->last_activation2 = 0;
-	neuron->type = other->type; //NEURON or SENSOR type
-	neuron->activation_count = 0; //Inactive upon creation
-	neuron->id = other->id;
-	neuron->fType = NQ_SIGMOID;
-	neuron->node_label = other->node_label;
-	neuron->dupe = 0;
-	neuron->analogue = 0;
-	neuron->frozen = false;
-	//neuron->trait = trait;
-	//neuron->trait_id = (trait != 0) ? trait->id : 1;
-	neuron->override = false;
+	neuron->value = other->value;
 	neuron->ilinks = vector_init();
 	neuron->olinks = vector_init();
 
 	return neuron;
 }
 
-// Copy constructor.
-neuron_t* Neuron_Init_Copy(neuron_t* other)
-{
-	neuron_t* neuron = malloc(sizeof(neuron_t));
-	if (neuron == 0) return ((void*)1);
-
-	neuron->active_flag			= other->active_flag;
-	neuron->activesum			= other->activesum;
-	neuron->activation			= other->activation;
-	neuron->value				= other->value;
-	neuron->last_activation		= other->last_activation;
-	neuron->last_activation2	= other->last_activation2;
-	neuron->type				= other->type; //NEURON or SENSOR type
-	neuron->activation_count	= other->activation_count; //Inactive upon creation
-	neuron->id					= other->id;
-	neuron->fType				= other->fType;
-	neuron->node_label			= other->node_label;
-	neuron->dupe				= other->dupe;
-	neuron->analogue			= other->analogue;
-	neuron->frozen				= other->frozen;
-	//neuron->trait				= other->trait;
-	//neuron->trait_id			= other->trait_id;
-	neuron->override			= other->override;
-	neuron->ilinks				= vector_init();
-	neuron->olinks				= vector_init();
-
-	return neuron;
-}
-
+/*
 neuron_t* Neuron_Init_Load(char *argline)
 {
 	char *curword;
@@ -171,7 +82,7 @@ neuron_t* Neuron_Init_Load(char *argline)
 	}
 
 	// We can just pass these value into the other constructor now.
-	return Neuron_Init_Placement(args[1], args[0], args[2]);
+	return Neuron_Init();
 }
 
 double Neuron_Get_Active_Out(neuron_t* node)
@@ -183,6 +94,7 @@ double Neuron_Get_Active_Out_TD(neuron_t* node)
 {
 	return (node->activation_count > 0) ? node->last_activation : 0.0;
 }
+*/
 
 void Neuron_Delete(neuron_t* node)
 {
@@ -192,22 +104,12 @@ void Neuron_Delete(neuron_t* node)
 	free(node);
 }
 
+/*
 cbool Neuron_Sensor_Load(neuron_t* node, double value)
 {
-	if (node->type == NQ_SENSOR)
-	{
-		node->last_activation2 = node->last_activation;
-		node->last_activation = node->activation;
-
-		node->activation_count++;
-		node->activation = value;
-
-		return true;
-	}
-	return false;
+	node->value = value;
 }
 
-/*
 void Neuron_Add_Incoming_Recurring(neuron_t* node, neuron_t* other, double w, cbool recur)
 {
 	gene_t* newlink = Link_Init(w, other, node, recur);
@@ -222,7 +124,6 @@ void Neuron_Add_Incoming(neuron_t* node, neuron_t* other, double w)
 	vector_add(other->olinks, newlink);
 }
 
-/*
 void Neuron_Flushback(neuron_t* node)
 {
 	if (node->type != NQ_SENSOR)
@@ -298,7 +199,6 @@ void Neuron_Flushback_Check(neuron_t* node, vector* seenlist)
 	}
 }
 
-/*
 void Neuron_Derive_Trait(neuron_t* node, trait_t *curtrait)
 {
 	if (curtrait != 0) {
@@ -314,7 +214,6 @@ void Neuron_Derive_Trait(neuron_t* node, trait_t *curtrait)
 		node->trait_id = curtrait->id;
 	else node->trait_id = 1;
 }
-*/
 
 void Neuron_Override_Output(neuron_t* node, double new_output)
 {
@@ -328,24 +227,27 @@ void Neuron_Activate_Override(neuron_t* node)
 	node->override = false;
 }
 
-int Neuron_Depth(neuron_t* node, int d, network_t* net)
+
+int Neuron_Depth(neuron_t* node, int d)
 {
 	if (d > 100) return 10;
-	if (node->type == NQ_SENSOR) return d;
+	//if (node->type == NQ_SENSOR) return d;
 
 	int max = d;
 
 	for (int i = 0; i < node->ilinks->count; i++)
 	{
 		gene_t* curlink = node->ilinks->data[i];
-		int cur_depth = Neuron_Depth(curlink->inode, d + 1, net);
+		int cur_depth = Neuron_Depth(curlink->inode, d + 1);
 		if (cur_depth > max) max = cur_depth;
 	}
 
 	return max;
 }
 
+/*
 void Neuron_FPrint(neuron_t *node, FILE *f)
 {
-	fprintf(f, "n %d %d %d\n", node->id, node->type, node->node_label);
+	fprintf(f, "n %d %d %d\n", node, node->type, node->node_label);
 }
+*/

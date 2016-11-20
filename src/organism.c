@@ -17,9 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-#include "organism.h"
-#include "neural_def.h"
-#include "genome.h"
+#include "species.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -62,7 +60,7 @@ organism_t* Organism_Init_Copy(organism_t* o)
 
 	organism->fitness = o->fitness;
 	organism->orig_fitness = o->orig_fitness;
-	organism->gnome = Genome_Init_Copy(o->gnome); // Associative relationship
+	organism->gnome = Genome_Duplicate(o->gnome, o->gnome->id); // Associative relationship
 	organism->net = Network_Init_Copy(o->net); // Associative relationship
 	organism->species = o->species;	// Delegation relationship
 	organism->expected_offspring = o->expected_offspring;

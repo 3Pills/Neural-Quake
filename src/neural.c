@@ -25,9 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "neural_def.h"
 #include "network.h"
 #include "population.h"
-#include "organism.h"
-#include "genome.h"
-#include "species.h"
 
 // Determines whether the network should be executing or not. 
 // Set to true during NQ_Start.
@@ -99,16 +96,16 @@ static char* outputCmds[NQ_OUTPUT_COUNT] = {
 #define NQ_GRAPH_INBOX_WIDTH NQ_GRAPH_WIDTH / NQ_INPUT_COLS
 #define NQ_GRAPH_INBOX_HEIGHT NQ_GRAPH_HEIGHT / NQ_INPUT_ROWS
 
-#define NQ_GRAPH_HIDDEN_HEIGHT 1.1
+#define NQ_GRAPH_HIDDEN_HEIGHT 1.35
 
 #define NQ_GRAPH_OUTBOX_SIZE NQ_GRAPH_WIDTH / 15
 #define NQ_GRAPH_OUTPUT_HEIGHT 1.8
 
 // Contains: uinode_t. Stores nodes for display in the neural graph.
-static vector *uinodes;
+static vector *uinodes = 0;
 
 // Contains: uilink_t. Stores links for display in the neural graph.
-static vector *uilinks;
+static vector *uilinks = 0;
 
 void NQ_Init()
 {
@@ -285,7 +282,7 @@ void NQ_Start(lparse_t *line)
 		inputs = vector_init();
 
 		// Initialize a bunch of trace objects to store the data from input gathering in.
-		for (int i = 0; i < NQ_INPUT_COUNT; i++)
+		for (int i = 0; i < network->genotype->num_in - 1; i++)
 		{
 			trace_t* trace = malloc(sizeof(trace_t));
 			trace->allsolid = false;
@@ -310,8 +307,8 @@ void NQ_Start(lparse_t *line)
 
 	if (outputs == 0)
 	{ 
-		outputs = malloc(sizeof(outputs)*NQ_OUTPUT_COUNT);
-		memset(outputs, 0, NQ_OUTPUT_COUNT * sizeof(double*));
+		outputs = malloc(sizeof(outputs)*network->genotype->num_out);
+		memset(outputs, 0, network->genotype->num_out * sizeof(double*));
 	}
 
 	Con_Printf("  Building UI Graph Data\n");
@@ -322,7 +319,7 @@ void NQ_Start(lparse_t *line)
 		uinode_t *uinode = 0;
 
 		// Create input UI Nodes for the graph.
-		for (int i = 0; i < NQ_INPUT_COUNT; i++)
+		for (int i = 0; i < network->genotype->num_in-1; i++)
 		{
 			int x = i % NQ_INPUT_COLS, y = (NQ_INPUT_ROWS - 1) - (i / NQ_INPUT_COLS);
 
@@ -332,9 +329,21 @@ void NQ_Start(lparse_t *line)
 			uinode->y = NQ_GRAPH_POSY + y * NQ_GRAPH_INBOX_HEIGHT;
 			uinode->sizex = NQ_GRAPH_INBOX_WIDTH - NQ_GRAPH_BOX_PADDING;
 			uinode->sizey = NQ_GRAPH_INBOX_HEIGHT - NQ_GRAPH_BOX_PADDING;
+			uinode->color = 63;
 
 			vector_add(uinodes, uinode);
 		}
+
+		// Create the bias node
+		uinode = malloc(sizeof(uinode_t));
+
+		uinode->x = NQ_GRAPH_POSX + 1 + NQ_GRAPH_WIDTH / 2 - NQ_GRAPH_INBOX_WIDTH / 2;
+		uinode->y = NQ_GRAPH_POSY + (NQ_INPUT_ROWS+0.5) * NQ_GRAPH_INBOX_HEIGHT;
+		uinode->sizex = NQ_GRAPH_INBOX_WIDTH - NQ_GRAPH_BOX_PADDING;
+		uinode->sizey = NQ_GRAPH_INBOX_HEIGHT - NQ_GRAPH_BOX_PADDING;
+		uinode->color = 63;
+
+		vector_add(uinodes, uinode);
 
 #pragma region output_uinodes
 		// Manually Create output UI nodes for the graph.
@@ -431,14 +440,14 @@ void NQ_Start(lparse_t *line)
 #pragma endregion
 
 
-		// Add all extra hidden / bias nodes.
-		for (int i = NQ_INPUT_COUNT + NQ_OUTPUT_COUNT; i < network->all_nodes->count; i++)
+		// Add all extra hidden nodes.
+		for (int i = network->genotype->num_in + network->genotype->num_out; i < network->neurons->count; i++)
 		{
 			uinode = malloc(sizeof(uinode_t));
 			vector_add(uinodes, uinode);
 		}
 	}
-
+	
 	if (uilinks == 0)
 	{
 		uilinks = vector_init();
@@ -452,6 +461,19 @@ void NQ_Start(lparse_t *line)
 	Con_Printf("Neural population initialized\n");
 
 	network_on = true;
+
+	// Reload the level on start.
+	char map_cmd[128] = "map ";
+
+	if (svs.maxclients == 1)
+	{
+		strcat(map_cmd, cl.worldname);
+		Cmd_ExecuteString(map_cmd, src_command);
+	}
+	else
+	{
+		Cmd_ExecuteString("kill", src_client);
+	}
 }
 
 void NQ_End(lparse_t *line)
@@ -724,15 +746,15 @@ void NQ_Evaluate(organism_t* organism)
 	for (int i = 0; i <= Network_Max_Depth(network) + 1; i++)
 		success = Network_Activate(network);
 
-	// Take the activation value of the network into the global output vector for use with inputs.
-	for (int i = 0; i < network->outputs->count; i++)
-		outputs[i] = ((neuron_t*)network->outputs->data[i])->activation;
+	// Take the value of each output in the network into the global output vector for use with inputs.
+	for (int i = network->genotype->num_in; i < network->genotype->num_in + network->genotype->num_out; i++)
+		outputs[i - network->genotype->num_in] = ((neuron_t*)network->neurons->data[i])->value;
 
 	for (int i = 0; i < uilinks->count; i++)
 	{
 		uilink_t *uilink = uilinks->data[i];
 		gene_t *gene = uilink->gene;
-		uilink->opacity = !gene->enabled ? 0 : gene->inode->value == 0 ? 0.1 : 0.6;
+		uilink->opacity = !gene->enabled ? 0 : ((neuron_t*)network->genotype->neurons->data[gene->inode])->value == 0 ? 0.1 : 0.6;
 	}
 
 	//Network_Flush(network);
@@ -950,31 +972,30 @@ void Draw_NeuralGraph()
 		{
 			if (inputs != 0 && inputs->count > 0)
 			{
-				for (int i = 0; i < NQ_INPUT_COUNT; i++)
+				for (int i = 0; i < organism->net->genotype->num_in; i++)
 				{
 					uinode_t *uinode = uinodes->data[i];
 					trace_t *trace = inputs->data[i];
 
-					Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, trace->plane.dist, 1);
+					Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, (i != organism->net->genotype->num_in-1) ? trace->plane.dist : uinode->color, 1);
 				}
 			}
 
-			// Draw all nodes between the input and the output in a new row.
-			// This begins with the input bias node, which always exists.
-			for (int i = NQ_INPUT_COUNT + NQ_OUTPUT_COUNT; i < uinodes->count; i++)
+			// Draw all nodes between the input and the output.
+			for (int i = organism->net->genotype->num_in + organism->net->genotype->num_out; i < uinodes->count; i++)
 			{
 				uinode_t *uinode = uinodes->data[i];
 				if (uinode != 0) Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, uinode->color, 1);
 			}
 
-			// Manually draw each output in spots resembelling a controller
+			// Draw each output in spots resembling a controller
 			if (outputs != 0)
 			{
 				// Draw output nodes.
-				for (int i = NQ_INPUT_COUNT; i < NQ_INPUT_COUNT + NQ_OUTPUT_COUNT; i++)
+				for (int i = organism->net->genotype->num_in; i < organism->net->genotype->num_in + organism->net->genotype->num_out; i++)
 				{
 					uinode_t *uinode = uinodes->data[i];
-					Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, outputs[i - NQ_INPUT_COUNT] > 0.5 ? 251 : 248, 1);
+					Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, outputs[i - organism->net->genotype->num_in] > 0.5 ? 251 : 248, 1);
 				}
 
 				// Draw output labels.
@@ -1001,7 +1022,7 @@ void Draw_NeuralGraph()
 void UI_RefreshGraph(organism_t *organism)
 {
 	// Remove all hidden UI nodes from the vector. Except for the input bias.
-	for (int i = uinodes->count - 1; i > NQ_INPUT_COUNT + NQ_OUTPUT_COUNT + 1; i--)
+	for (int i = uinodes->count - 1; i > organism->net->genotype->num_in + organism->net->genotype->num_out; i--)
 	{
 		free(uinodes->data[i]);
 		uinodes->data[i] = NULL;
@@ -1010,18 +1031,13 @@ void UI_RefreshGraph(organism_t *organism)
 
 	vector_free(uilinks);
 
-
-	for (int i = 0; i < NQ_INPUT_COUNT; i++)
-	{
-		neuron_t *node = organism->net->all_nodes->data[i];
-		uinode_t *uinode = uinodes->data[i];
-		uinode->node = node;
-	}
+	for (int i = 0; i < organism->net->genotype->num_in; i++)
+		((uinode_t*)uinodes->data[i])->node = organism->net->neurons->data[i];
 
 	// Refresh all hidden layer nodes, also linking them between their inputs and outputs.
-	for (int i = NQ_INPUT_COUNT; i < organism->net->all_nodes->count; i++)
+	for (int i = organism->net->genotype->num_in; i < organism->net->neurons->count; i++)
 	{
-		neuron_t *node = organism->net->all_nodes->data[i];
+		neuron_t *node = organism->net->neurons->data[i];
 		uinode_t *uinode = 0;
 
 		if (uinodes->count <= i || uinodes->data[i] == NULL)
@@ -1036,7 +1052,7 @@ void UI_RefreshGraph(organism_t *organism)
 
 		uinode->node = node;
 
-		if (i >= NQ_INPUT_COUNT + NQ_OUTPUT_COUNT)
+		if (i >= organism->net->genotype->num_in + organism->net->genotype->num_out)
 		{
 
 			int x = ((i - (NQ_INPUT_COUNT + NQ_OUTPUT_COUNT)) % NQ_INPUT_COLS),
@@ -1047,16 +1063,7 @@ void UI_RefreshGraph(organism_t *organism)
 			uinode->sizex = NQ_GRAPH_INBOX_WIDTH - NQ_GRAPH_BOX_PADDING;
 			uinode->sizey = NQ_GRAPH_INBOX_HEIGHT - NQ_GRAPH_BOX_PADDING;
 
-			// We don't link the bias between nodes, because it is implied to link to every node.
-			// If we did it would just obfuscate the diagram.
-			if (node->node_label == NQ_BIAS)
-			{
-				uinode->color = 15;
-			}
-			else if (node->node_label == NQ_HIDDEN)
-			{
-				uinode->color = 63;
-			}
+			uinode->color = 63;
 		}
 	}
 
@@ -1065,8 +1072,8 @@ void UI_RefreshGraph(organism_t *organism)
 		gene_t *gene = organism->gnome->genes->data[i];
 		uilink_t *uilink = malloc(sizeof(uilink_t));
 
-		uilink->start = uinodes->data[gene->inode->id];
-		uilink->end = uinodes->data[gene->onode->id];
+		uilink->start = uinodes->data[gene->inode];
+		uilink->end = uinodes->data[gene->onode];
 		uilink->color = gene->weight > 0 ? 63 : gene->weight < 0 ? 79 : 7;
 		uilink->opacity = !gene->enabled ? 0.0 : 0.1;
 		uilink->gene = gene;

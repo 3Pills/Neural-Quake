@@ -24,16 +24,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define __GENE_H__
 
 #include <stdio.h>
-#include "environment.h"
+#include "innovation.h"
 #include "vector.h"
-
-typedef struct neuron_s neuron_t;
 
 //Type definitions for our neural network.
 typedef struct gene_s
 {
-	neuron_t* inode; // Input neuron.
-	neuron_t* onode; // Output neuron.
+	int inode; // Input neuron index within genome.
+	int onode; // Output neuron index within genome.
 
 	double weight;
 
@@ -45,10 +43,10 @@ typedef struct gene_s
 } gene_t; // Defines the connection between neurons.
 
 // Construct a gene without a trait.
-gene_t* Gene_Init(double w, neuron_t* inode, neuron_t* onode, double innov, double mnum);
+gene_t* Gene_Init(double w, int inode, int onode, double innov, double mnum);
 
 //Construct a gene off of another gene as a duplicate
-gene_t* Gene_Init_Dupe(gene_t *g, neuron_t *inode, neuron_t *onode);
+gene_t* Gene_Init_Dupe(gene_t *g, int inode, int onode);
 
 // Duplicate a gene from another existing gene.
 gene_t* Gene_Init_Copy(gene_t* g);

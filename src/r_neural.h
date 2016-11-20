@@ -22,7 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __NEURAL_RENDER_H__
 #define __NEURAL_RENDER_H__
 
-#include "gene.h"
+typedef struct neuron_s neuron_t;
+typedef struct gene_s gene_t;
 
 void Draw_Line(int x1, int y1, int x2, int y2, float thickness, int c, float alpha);
 void Draw_Square(int x, int y, int w, int h, float thickness, int c, float alpha);

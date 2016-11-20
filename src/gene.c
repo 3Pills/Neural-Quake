@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "neural_def.h"
 #include "quakedef.h"
 
-gene_t* Gene_Init(double w, neuron_t* inode, neuron_t* onode, double innov, double mnum)
+gene_t* Gene_Init(double w, int inode, int onode, double innov, double mnum)
 {
 	gene_t* gene = malloc(sizeof(gene_t));
 	if (gene == 0) return NULL;
@@ -37,7 +37,7 @@ gene_t* Gene_Init(double w, neuron_t* inode, neuron_t* onode, double innov, doub
 	return gene;
 }
 
-gene_t* Gene_Init_Dupe(gene_t *g, neuron_t *inode, neuron_t *onode)
+gene_t* Gene_Init_Dupe(gene_t *g, int inode, int onode)
 {
 	gene_t* gene = malloc(sizeof(gene_t));
 	if (gene == 0) return NULL;
@@ -158,9 +158,8 @@ gene_t* Gene_Init_Load(char *argline, vector *nodes)
 	// Find the nodes on either side of the gene, using the ids stored in the file.
 	for (int i = 0; i < nodes->count; i++)
 	{
-		neuron_t *curnode = nodes->data[i];
-		if (curnode->id == inode_id) gene->inode = nodes->data[i];
-		if (curnode->id == onode_id) gene->onode = nodes->data[i];
+		if (inode_id == i) gene->inode = i;
+		if (onode_id == i) gene->onode = i;
 
 		if (gene->inode != 0 && gene->onode != 0) break;
 	}
@@ -178,6 +177,6 @@ void Gene_FPrint(gene_t* gene, FILE *f)
 {
 	if (f == NULL) return;
 
-	fprintf(f, "g %i %i %f %i %d %f %i\n", gene->inode->id, gene->onode->id, 
+	fprintf(f, "g %i %i %f %i %d %f %i\n", gene->inode, gene->onode, 
 		gene->weight, gene->innovation_num, gene->mutation_num, gene->enabled);
 }

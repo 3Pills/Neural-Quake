@@ -18,9 +18,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "species.h"
-#include "network.h"
+
 #include "neural.h"
-#include "neural_def.h"
+
+#include "vector.h"
+#include "organism.h"
+#include "population.h"
+#include "network.h"
+
 #include <math.h>
 #include <stdlib.h>
 
@@ -242,6 +247,11 @@ double Species_Count_Offspring(species_t *species, double skim)
 	}
 
 	return skim;
+}
+
+genome_t *Species_Reproduce_Simple()
+{
+
 }
 
 cbool Species_Reproduce(species_t *species, int generation, population_t* pop, vector *sorted_species)

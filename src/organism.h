@@ -22,13 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __ORGANISM_H__
 #define __ORGANISM_H__
 
-#include "environment.h"
-#include "genome.h"
-#include "species.h"
+#include "network.h"
 
-
+// Species forward declaration
 typedef struct species_s species_t;
-typedef struct network_s network_t;
 
 typedef struct organism_s
 {

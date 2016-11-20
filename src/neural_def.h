@@ -42,9 +42,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NQ_TRAIT_MUT_POWER 1.0
 #define NQ_WEIGHT_MUT_POWER 1.0
 
-#define NQ_DELTA_DISJOINT = 2.0
-#define NQ_DELTA_WEIGHTS = 0.4
-#define NQ_DELTA_THRESHOLD = 1.0
+#define NQ_DELTA_DISJOINT 2.0
+#define NQ_DELTA_WEIGHTS 0.4
+#define NQ_DELTA_THRESHOLD 1.0
 
 #define NQ_DISJOINT_COEFF 1.0 // Coefficient for genome compatibility testing.
 #define NQ_EXCESS_COEFF 1.0 // Coefficient for genome compatibility testing.

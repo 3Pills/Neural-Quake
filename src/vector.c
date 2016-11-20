@@ -7,6 +7,7 @@ Licensed under MIT license
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 #include "vector.h"
 
@@ -49,11 +50,31 @@ void vector_add(vector *v, void *e)
 
 void vector_insert(vector *v, int index, void *e)
 {
-	v->count++;
-	if (v->size <= v->count) 
+	if (index >= v->count)
 	{
-		v->size *= 2;
-		v->data = realloc(v->data, sizeof(void*) * v->size);
+		if (v->size <= index + 1)
+		{
+			if (v->size == 0) 
+				v->size = 2;
+
+			while (v->size <= index + 1)
+				v->size *= 2;
+
+			v->data = realloc(v->data, sizeof(void*) * v->size);
+		}
+		for (int i = v->count; i < index; i++)
+			v->data[i] = 0;
+
+		v->count = index + 1;
+	}
+	else 
+	{
+		v->count++;
+		if (v->size <= v->count)
+		{
+			v->size *= 2;
+			v->data = realloc(v->data, sizeof(void*) * v->size);
+		}
 	}
 
 	for (int i = v->count; i > index; i--)

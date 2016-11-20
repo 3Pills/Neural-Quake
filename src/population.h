@@ -20,13 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __POPULATION_H__
 #define __POPULATION_H__
 
-#include "innovation.h"
-#include "genome.h"
 #include "species.h"
-#include "organism.h"
-
-typedef struct species_s species_t;
-typedef struct organism_s organism_t;
 
 typedef struct population_s
 {
