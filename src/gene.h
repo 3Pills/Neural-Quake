@@ -24,40 +24,46 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define __GENE_H__
 
 #include <stdio.h>
-#include "innovation.h"
+#include "environment.h"
 #include "vector.h"
 
 //Type definitions for our neural network.
 typedef struct gene_s
 {
-	int inode; // Input neuron index within genome.
-	int onode; // Output neuron index within genome.
+	unsigned short inode; // Input neuron index within genome.
+	unsigned short onode; // Output neuron index within genome.
 
-	double weight;
+	double weight; // The weight between node values within the network.
 
-	cbool enabled; // Disables the gene.
+	cbool enabled; // Flag to disable weight processing.
 
-	int innovation_num; // Used for finding corresponding genes during crossover.
-	double mutation_num; // Used to see how much mutation has changed the link.
+	// The creation number of the gene within the population.
+	// Used for finding corresponding genes during crossover.
+	unsigned int innovation_num; 
+	//double mutation_num; // Used to see how much mutation has changed the link.
 
 } gene_t; // Defines the connection between neurons.
 
 // Construct a gene without a trait.
-gene_t* Gene_Init(double w, int inode, int onode, double innov, double mnum);
+gene_t* Gene_Init(double w, unsigned short inode, unsigned short onode, unsigned int innov);
 
-//Construct a gene off of another gene as a duplicate
-gene_t* Gene_Init_Dupe(gene_t *g, int inode, int onode);
-
-// Duplicate a gene from another existing gene.
+// Construct a duplicate gene from an existing gene.
 gene_t* Gene_Init_Copy(gene_t* g);
 
-// Construct a gene from a file spec given traits and nodes.
-gene_t* Gene_Init_Load(char *argline, vector *nodes);
+// Construct a gene from a line of data. This line will be loaded froma file.
+gene_t* Gene_Init_Load(char *argline);
 
-// Delete a gene
+// Gene Deconstructor. Also frees memory
 void Gene_Delete(gene_t* gene);
 
-// Print gene data to a file. Called from Genome_FPrint.
-void Gene_FPrint(gene_t* gene, FILE *f);
+// Print gene data to a file. Called from Genome_Save.
+void Gene_Save(gene_t* gene, FILE *f);
+
+// Check if a gene already exists within a vector,
+// i.e. there is a gene with the same inode and onode.
+cbool Gene_Is_Within(gene_t *gene, vector *genes);
+
+// Quicksort function for genes in a genome.
+cbool Gene_Quicksort_By_OutputID(gene_t* x, gene_t* y);
 
 #endif // !__GENE_H__

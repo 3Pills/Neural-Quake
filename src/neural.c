@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_neural.h"
 #include "vector.h"
 #include "neural_def.h"
-#include "network.h"
 #include "population.h"
 
 // Determines whether the network should be executing or not. 
@@ -37,69 +36,58 @@ static population_t *population = 0;
 static vector *inputs = 0;
 
 // Array of output values from the neural network.
-static double *outputs = 0;
+static char *outputs = 0;
 
 // Timer to restart the level when the AI idles or dies.
 static double timeout = 0.0;
 
+// Timer to restart the level when the AI is stuck in a small area.
+static double timeout_moving = 0.0;
+
 // Timer to space out neural processing, rather than doing it every frame.
 static double timestep = 0.0;
 
-static int trace_length = 1000.0f;
+// Trace length is about a small corridor's length.
+// We keep it this short to keep the AI interested in 
+// traces that end in empty space, i.e. a place to go.
+static float trace_length = 325.0f;
 
 // Index of the current species within the population.
-static int currSpecies = 0;
+static unsigned int curr_species = 0;
 
 // Index of the current organism within the species.
-static int currOrganism = 0;
-
-// Current generation of the population.
-static int generation = 0;
+static unsigned int curr_genome = 0;
 
 // Position of the player spawn point.
 static vec3_t start_pos = { 0, 0, 0 };
 
-// Tracks the position change of the player. Used to determine timeout.
-static vec3_t prev_pos = { 0, 0, 0 };
+// Tracks the position change of the player. Used to determine idle timeout.
+static vec3_t prev_short_pos = { 0, 0, 0 };
+
+// Tracks the position change of the player. Used to determine moving timeout.
+static vec3_t prev_long_pos = { 0, 0, 0 };
 
 // Distance to travel before prev_pos is updated.
 // Roughly the distance of a jump.
-static double distance_to_timeout = 64.0;
+static double distance_to_timeout = 56.0;
+static double distance_to_timeout_moving = 215.0;
 
 // Contains: vec3_t*. Stores all the final pos results of every genome ever.
-static vector *distStorage = 0;
+static vector *distance_storage = 0;
 
 // Spawn flag to determine when to reload
-static cbool spawnSet = false;
+static cbool spawn_set = false;
 
 // Name of the currently loaded level.
 // Tracks whether the level has changed or not.
-static char levelName[64];
+static char level_name[64];
 
 // Output commands without +/- prefix. 
 // Prefix will be added depending on the output of the network.
-static char* outputCmds[NQ_OUTPUT_COUNT] = {
+static char* output_cmds[NQ_OUTPUT_COUNT] = {
 	"forward", "back", "moveleft", "moveright",
 	"left", "right", "lookup", "lookdown", "attack", "jump"
 };
-
-
-// Neural Graph variable definitions.
-#define NQ_GRAPH_POSX 0
-#define NQ_GRAPH_POSY 80
-
-#define NQ_GRAPH_WIDTH 360
-#define NQ_GRAPH_HEIGHT 220
-
-// Values for boxes in graph.
-#define NQ_GRAPH_BOX_PADDING 2
-#define NQ_GRAPH_INBOX_WIDTH NQ_GRAPH_WIDTH / NQ_INPUT_COLS
-#define NQ_GRAPH_INBOX_HEIGHT NQ_GRAPH_HEIGHT / NQ_INPUT_ROWS
-
-#define NQ_GRAPH_HIDDEN_HEIGHT 1.35
-
-#define NQ_GRAPH_OUTBOX_SIZE NQ_GRAPH_WIDTH / 15
-#define NQ_GRAPH_OUTPUT_HEIGHT 1.8
 
 // Contains: uinode_t. Stores nodes for display in the neural graph.
 static vector *uinodes = 0;
@@ -114,99 +102,101 @@ void NQ_Init()
 
 void NQ_Reload()
 {
-	if (strcmp(levelName, cl.worldname) != 0)
+	if (strcmp(level_name, cl.worldname) != 0)
 	{
-		spawnSet = false;
-		strcpy(levelName, cl.worldname);
+		spawn_set = false;
+		strcpy(level_name, cl.worldname);
 	}
 }
 
 void CL_NeuralThink(double frametime)
 {
-	if (!network_on || population == NULL || sv.paused || key_dest != key_game) return;
+	if (!network_on || population == NULL || cl.paused || key_dest != key_game) return;
 
 	float timescale = (host_timescale.value == 0) ? 1 : host_timescale.value;
 
-	if (!spawnSet)
+	if (!spawn_set)
 	{
 		VectorCopy(cl_entities[cl.viewentity].origin, start_pos);
-		spawnSet = true;
+		spawn_set = true;
 
 		// Add the spawn position of the player to check the sparseness of our results from.
-		vector_clear(distStorage);
-		vec3_t *firstStorage = malloc(sizeof(vec3_t));
+		for (unsigned int i = 0; i < distance_storage->count; i++)
+			free(distance_storage->data[i]);
 
-		*(*firstStorage + 0) = cl_entities[cl.viewentity].origin[0];
-		*(*firstStorage + 1) = cl_entities[cl.viewentity].origin[1];
-		*(*firstStorage + 2) = cl_entities[cl.viewentity].origin[2];
+		vector_free(distance_storage);
 
-		vector_add(distStorage, firstStorage);
+		vec3_t *first_storage = (vec3_t*)malloc(sizeof(vec3_t));
+
+		*(*first_storage + 0) = cl_entities[cl.viewentity].origin[0];
+		*(*first_storage + 1) = cl_entities[cl.viewentity].origin[1];
+		*(*first_storage + 2) = cl_entities[cl.viewentity].origin[2];
+
+		vector_push(distance_storage, first_storage);
 	}
-
-	timeout += frametime * timescale;
 
 	// Only gather input when the player is alive.
 	if (cl.stats[STAT_HEALTH] > 0)
 	{
 		timestep += frametime * timescale;
 
-		if (DistanceBetween2Points(prev_pos, cl_entities[cl.viewentity].origin) > distance_to_timeout)
-		{
-			timeout = 0;
-			VectorCopy(cl_entities[cl.viewentity].origin, prev_pos);
-		}
-
 		// Interact with network at 12FPS.
 		if (timestep > (double)1 / 12)
 		{
-			// Retrieve information on what the AI can see.
-			NQ_GetInputs();
-
 			// Evaluate the input, passing it into the current organism within the current species.
-			NQ_Evaluate(((species_t*)population->species->data[currSpecies])->organisms->data[currOrganism]);
+			NQ_Evaluate(((species_t*)population->species->data[curr_species])->genomes->data[curr_genome]);
+		}
+
+		if (DistanceBetween2Points(prev_short_pos, cl_entities[cl.viewentity].origin) > distance_to_timeout)
+		{
+			timeout = 0;
+			VectorCopy(cl_entities[cl.viewentity].origin, prev_short_pos);
+		}
+
+		if (DistanceBetween2Points(prev_long_pos, cl_entities[cl.viewentity].origin) > distance_to_timeout_moving)
+		{
+			timeout_moving = 0;
+			VectorCopy(cl_entities[cl.viewentity].origin, prev_long_pos);
 		}
 	}
-	// Timeout after two seconds once we die. Just to 
+	// Timeout after two seconds once we die.
 	else if (timeout + 2 < NQ_TIMEOUT)
 	{
 		timeout = NQ_TIMEOUT - 2;
 	}
 
-	if (sv_player != NULL && timeout >= NQ_TIMEOUT) NQ_Timeout();
+	if (sv_player != NULL && (timeout >= NQ_TIMEOUT || timeout_moving >= NQ_TIMEOUT_MOVING)) NQ_Timeout();
+
+	// Add to timeout after the frame has processed. 
+	// Allows for high timescales without immediately exceeding the timeout value.
+	timeout += frametime * timescale;
+	timeout_moving += frametime * timescale;
 }
 
 void CL_NeuralMove(usercmd_t *cmd)
 {
 	// If the client doesn't have entities, it will 
 	// not have the player to trace from. Return.
-	if (!network_on || sv.max_edicts == 0) return;
+	if (!network_on || cl.maxclients == 0) return;
 
 	// Timestep for input gathering and engine output.
 	if (timestep < (double)1 / 12) return;
 
 	// We need to disable all inputs if we're paused or otherwise not inputting to the game.
-	if (sv.paused || key_dest != key_game)
-	{
-		for (int i = 0; i < NQ_OUTPUT_COUNT; i++)
-		{
-			char out_cmd[80];
-			strcpy(out_cmd, "-");
-			strcat(out_cmd, outputCmds[i]);
-			Cmd_ExecuteString(out_cmd, src_client);
-		}
-		return;
-	}
+	if (cl.paused || key_dest != key_game) return;
 
 	timestep = 0;
 
+	species_t *species = population->species->data[curr_species];
+	genome_t *genome = species->genomes->data[curr_genome];
+
 	// Execute movement commands based on the output results of the network.
-	for (int i = 0; i < NQ_OUTPUT_COUNT; i++)
+	for (int i = 0; i < genome->num_out; i++)
 	{
-		char out_cmd[80];
-		double output = outputs[i];
-		strcpy(out_cmd, (output > 0.5) ? "+" : "-");
-		strcat(out_cmd, outputCmds[i]);
-		Cmd_ExecuteString(out_cmd, src_client);
+		char output_cmd[80];
+		strcpy(output_cmd, (outputs[i] == 1) ? "+" : "-");
+		strcat(output_cmd, output_cmds[i]);
+		Cmd_ExecuteString(output_cmd, src_client);
 	}
 }
 
@@ -214,14 +204,15 @@ void R_DrawNeuralData()
 {
 	if (!network_on || inputs == NULL) return;
 
-	R_DrawPoint(prev_pos, 12, (DistanceBetween2Points(prev_pos, cl_entities[cl.viewentity].origin) > distance_to_timeout) ? 15 : 7);
+	R_DrawPoint(prev_short_pos, 12, 7);
+	R_DrawPoint(prev_long_pos, 12, 12);
 
 	// Draw the impact point of the traces we gathered in NQ_GetInputs.
-	for (int i = 0; i < inputs->count; i++)
+	for (unsigned int i = 0; i < inputs->count; i++)
 	{
 		trace_t* trace = inputs->data[i];
 		// We use the otherwise unused plane.dist for debug color storage.
-		R_DrawPoint(trace->endpos, fmax(8 * trace->fraction, 1), trace->plane.dist);
+		R_DrawPoint(trace->endpos, fmax(2 * trace->fraction, 0.25), trace->plane.dist);
 	}
 }
 
@@ -238,40 +229,35 @@ void NQ_Start(lparse_t *line)
 	if (network_on) return;
 
 	// Attempt to load filename if its passed in as argument.
-	if (line != 0 && line->count == 2) NQ_Load(line);
+	if (line != 0 && line->count == 2)
+	{
+		NQ_Load(line);
+		// Population will be NULL if the load fails.
+		if (population == 0) return;
+	}
 
 	Con_Printf("\nNeural population initialization\n");
-
-	genome_t *start_genome = 0;
-	network_t *network = 0;
-	organism_t *organism = 0;
-
+	
+	genome_t *genome = 0;
 	if (population == 0)
 	{
 		Con_Printf("  Spawning Population\n");
-		start_genome = Genome_Init_Auto(NQ_INPUT_COUNT, NQ_OUTPUT_COUNT, 0, 0);
-		population = Population_Init(start_genome, NQ_POP_SIZE);
+		genome_t *base_genome = Genome_Init_Auto(NQ_INPUT_COUNT, NQ_OUTPUT_COUNT, 0, 0);
+		population = Population_Init(base_genome, NQ_POP_SIZE);
+		Genome_Delete(base_genome);
 
-		Con_Printf("  Verifying Spawned Population\n");
-		Population_Verify(population);
+		Con_Printf("  Generating First Genome with Population\n");
+		species_t *species = population->species->data[curr_species];
+		genome = species->genomes->data[curr_genome];
+		Genome_Genesis(genome);
 
-
-		species_t *species = population->species->data[currSpecies];
-		organism = species->organisms->data[currOrganism];
-
-		start_genome = organism->gnome;
-		network = Genome_Genesis(start_genome, population->organisms->count);
-
-		Con_Printf("  Activating Network\n");
-		Network_Activate(network);
+		Con_Printf("  Activating Genome's Neural Network\n");
+		Genome_Activate(genome);
 	}
 	else
 	{
-		species_t *species = population->species->data[currSpecies];
-		organism = species->organisms->data[currOrganism];
-
-		start_genome = organism->gnome;
-		network = organism->net;
+		species_t *species = population->species->data[curr_species];
+		genome = species->genomes->data[curr_genome];
 	}
 
 	if (inputs == 0 || outputs == 0)
@@ -282,9 +268,9 @@ void NQ_Start(lparse_t *line)
 		inputs = vector_init();
 
 		// Initialize a bunch of trace objects to store the data from input gathering in.
-		for (int i = 0; i < network->genotype->num_in - 1; i++)
+		for (int i = 0; i < genome->num_in - 1; i++)
 		{
-			trace_t* trace = malloc(sizeof(trace_t));
+			trace_t* trace = (trace_t*)malloc(sizeof(trace_t));
 			trace->allsolid = false;
 			trace->startsolid = false;
 			trace->ent = 0;
@@ -296,19 +282,20 @@ void NQ_Start(lparse_t *line)
 			memset(trace->endpos, 0, 3 * sizeof(float));
 			memset(trace->plane.normal, 0, 3 * sizeof(float));
 
-			vector_add(inputs, trace);
+			vector_push(inputs, trace);
 		}
 	}
 
-	if (distStorage == 0)
-		distStorage = vector_init();
+	spawn_set = false;
+	if (distance_storage == 0)
+		distance_storage = vector_init();
 	else
-		vector_clear(distStorage);
+		vector_clear(distance_storage);
 
 	if (outputs == 0)
 	{ 
-		outputs = malloc(sizeof(outputs)*network->genotype->num_out);
-		memset(outputs, 0, network->genotype->num_out * sizeof(double*));
+		outputs = (char*)malloc(sizeof(*outputs) * genome->num_out);
+		memset(outputs, 0, genome->num_out * sizeof(*outputs));
 	}
 
 	Con_Printf("  Building UI Graph Data\n");
@@ -319,11 +306,11 @@ void NQ_Start(lparse_t *line)
 		uinode_t *uinode = 0;
 
 		// Create input UI Nodes for the graph.
-		for (int i = 0; i < network->genotype->num_in-1; i++)
+		for (int i = 0; i < genome->num_in - 1; i++)
 		{
 			int x = i % NQ_INPUT_COLS, y = (NQ_INPUT_ROWS - 1) - (i / NQ_INPUT_COLS);
 
-			uinode = malloc(sizeof(uinode_t));
+			uinode = (uinode_t*)malloc(sizeof(uinode_t));
 
 			uinode->x = NQ_GRAPH_POSX + 1 + x * NQ_GRAPH_INBOX_WIDTH;
 			uinode->y = NQ_GRAPH_POSY + y * NQ_GRAPH_INBOX_HEIGHT;
@@ -331,120 +318,92 @@ void NQ_Start(lparse_t *line)
 			uinode->sizey = NQ_GRAPH_INBOX_HEIGHT - NQ_GRAPH_BOX_PADDING;
 			uinode->color = 63;
 
-			vector_add(uinodes, uinode);
+			vector_push(uinodes, uinode);
 		}
-
 		// Create the bias node
-		uinode = malloc(sizeof(uinode_t));
+		uinode = (uinode_t*)malloc(sizeof(uinode_t));
 
-		uinode->x = NQ_GRAPH_POSX + 1 + NQ_GRAPH_WIDTH / 2 - NQ_GRAPH_INBOX_WIDTH / 2;
-		uinode->y = NQ_GRAPH_POSY + (NQ_INPUT_ROWS+0.5) * NQ_GRAPH_INBOX_HEIGHT;
+		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH / 2 - NQ_GRAPH_INBOX_WIDTH / 2;
+		uinode->y = NQ_GRAPH_POSY + (NQ_INPUT_ROWS+0.25) * NQ_GRAPH_INBOX_HEIGHT;
 		uinode->sizex = NQ_GRAPH_INBOX_WIDTH - NQ_GRAPH_BOX_PADDING;
 		uinode->sizey = NQ_GRAPH_INBOX_HEIGHT - NQ_GRAPH_BOX_PADDING;
 		uinode->color = 63;
 
-		vector_add(uinodes, uinode);
+		vector_push(uinodes, uinode);
 
 #pragma region output_uinodes
-		// Manually Create output UI nodes for the graph.
 
+		// Create all the output nodes now.
+		for (int i = genome->num_in; i < genome->num_in + genome->num_out; i++)
+		{
+			uinode = (uinode_t*)malloc(sizeof(uinode_t));
+
+			uinode->x = 0;
+			uinode->y = 0;
+			uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
+			uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
+
+			vector_push(uinodes, uinode);
+		}
+
+		double y_anchor = NQ_GRAPH_POSY + NQ_GRAPH_OUTPUT_Y;
 		// forward
-		uinode = malloc(sizeof(uinode_t));
+		uinode = uinodes->data[genome->num_in];
 		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE;
-		uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE * 3;
-		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-
-		vector_add(uinodes, uinode);
+		uinode->y = y_anchor - NQ_GRAPH_OUTBOX_SIZE * 2;
 
 		// back
-		uinode = malloc(sizeof(uinode_t));
+		uinode = uinodes->data[genome->num_in + 1];
 		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE;
-		uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-
-		vector_add(uinodes, uinode);
+		uinode->y = y_anchor;
 
 		// moveleft
-		uinode = malloc(sizeof(uinode_t));
+		uinode = uinodes->data[genome->num_in + 2];
 		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025;
-		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
-		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-
-		vector_add(uinodes, uinode);
+		uinode->y = y_anchor - NQ_GRAPH_OUTBOX_SIZE;
 
 		// moveright
-		uinode = malloc(sizeof(uinode_t));
+		uinode = uinodes->data[genome->num_in + 3];
 		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE * 2;
-		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
-		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-
-		vector_add(uinodes, uinode);
+		uinode->y = y_anchor - NQ_GRAPH_OUTBOX_SIZE;
 
 		// left
-		uinode = malloc(sizeof(uinode_t));
+		uinode = uinodes->data[genome->num_in + 4];
 		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 3;
-		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
-		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-
-		vector_add(uinodes, uinode);
+		uinode->y = y_anchor - NQ_GRAPH_OUTBOX_SIZE;
 
 		// right
-		uinode = malloc(sizeof(uinode_t));
+		uinode = uinodes->data[genome->num_in + 5];
 		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE;
-		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE * 2;
-		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-
-		vector_add(uinodes, uinode);
+		uinode->y = y_anchor - NQ_GRAPH_OUTBOX_SIZE;
 
 		// lookup
-		uinode = malloc(sizeof(uinode_t));
+		uinode = uinodes->data[genome->num_in + 6];
 		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 2;
-		uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE * 3;
-		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-
-		vector_add(uinodes, uinode);
+		uinode->y = y_anchor - NQ_GRAPH_OUTBOX_SIZE * 2;
 
 		// lookdown
-		uinode = malloc(sizeof(uinode_t));
+		uinode = uinodes->data[genome->num_in + 7];
 		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 2;
-		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT - NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-
-		vector_add(uinodes, uinode);
+		uinode->y = y_anchor;
 
 		// attack
-		uinode = malloc(sizeof(uinode_t));
+		uinode = uinodes->data[genome->num_in + 8];
 		uinode->x = NQ_GRAPH_POSX + (NQ_GRAPH_WIDTH * 0.5 - NQ_GRAPH_OUTBOX_SIZE / 2) - NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING;
-		uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE - (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) / 2;
-		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-
-		vector_add(uinodes, uinode);
+		uinode->y = y_anchor - (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) / 2;
 
 		// jump
-		uinode = malloc(sizeof(uinode_t));
+		uinode = uinodes->data[genome->num_in + 9];
 		uinode->x = NQ_GRAPH_POSX + (NQ_GRAPH_WIDTH * 0.5 - NQ_GRAPH_OUTBOX_SIZE / 2) + NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING;
-		uinode->y = NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE - (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) / 2;
-		uinode->sizex = NQ_GRAPH_OUTBOX_SIZE;
-		uinode->sizey = NQ_GRAPH_OUTBOX_SIZE;
-		vector_add(uinodes, uinode);
+		uinode->y = y_anchor - (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) / 2;
 
 #pragma endregion
 
-
 		// Add all extra hidden nodes.
-		for (int i = network->genotype->num_in + network->genotype->num_out; i < network->neurons->count; i++)
+		for (unsigned int i = genome->num_in + genome->num_out; i < genome->neurons->count; i++)
 		{
-			uinode = malloc(sizeof(uinode_t));
-			vector_add(uinodes, uinode);
+			uinode = (uinode_t*)malloc(sizeof(uinode_t));
+			vector_push(uinodes, uinode);
 		}
 	}
 	
@@ -454,7 +413,7 @@ void NQ_Start(lparse_t *line)
 	}
 
 	// Initialize hidden / bias node positions and represent their neural links. 
-	UI_RefreshGraph(organism);
+	UI_RefreshGraph(genome);
 
 	// Network_Flush(network);
 
@@ -484,16 +443,44 @@ void NQ_End(lparse_t *line)
 	if (line != 0 && line->count == 2)
 		NQ_Save(line);
 
-
-	// Disable all inputs on end.
+	// Disable all key inputs on end.
 	for (int i = 0; i < NQ_OUTPUT_COUNT; i++)
 	{
-		char out_cmd[80];
-		strcpy(out_cmd, "-");
-		strcat(out_cmd, outputCmds[i]);
-		Cmd_ExecuteString(out_cmd, src_client);
+		char output_cmd[80];
+		strcpy(output_cmd, "-");
+		strcat(output_cmd, output_cmds[i]);
+		Cmd_ExecuteString(output_cmd, src_client);
 	}
 
+	// Memory cleanup crew, gettin our hands dirty...!
+	Population_Delete(population);
+	population = NULL;
+
+	for (unsigned int i = 0; i < inputs->count; i++)
+		free(inputs->data[i]);
+	vector_free_all(inputs);
+	inputs = NULL;
+
+	free(outputs);
+	outputs = NULL;
+
+	for (unsigned int i = 0; i < uinodes->count; i++)
+		free(uinodes->data[i]);
+	vector_free_all(uinodes);
+	uinodes = NULL;
+
+	for (unsigned int i = 0; i < uilinks->count; i++)
+		free(uilinks->data[i]);
+	vector_free_all(uilinks);
+	uilinks = NULL;
+
+	for (unsigned int i = 0; i < distance_storage->count; i++)
+		free(distance_storage->data[i]);
+	vector_free_all(distance_storage);
+	distance_storage = NULL;
+
+	curr_genome = 0;
+	curr_species = 0;
 	network_on = false;
 }
 
@@ -507,9 +494,12 @@ void NQ_Save(lparse_t *line)
 		return;
 	}
 
-	char filename[128];
-	strcpy(filename, line->args[1]);
-	strcat(filename, ".txt");
+	char filename[256];
+
+	// Neural save data will be stored in neural_backups subfolder.
+	strcpy(filename, "./neural_backups/");
+	strcat(filename, line->args[1]);
+	strcat(filename, ".nq");
 
 	FILE *f = fopen(filename, "w");
 	if (f == NULL)
@@ -518,10 +508,7 @@ void NQ_Save(lparse_t *line)
 		return;
 	}
 
-	fprintf(f, "%d %d %d", generation, currSpecies, currOrganism);
-
-	Population_FPrint(population, f);
-
+	Population_Save(population, f);
 	fclose(f);
 }
 
@@ -529,15 +516,25 @@ void NQ_Load(lparse_t *line)
 {
 	if (line == 0) return;
 
+	if (population != NULL)
+	{
+		Con_Printf("Neural AI Busy! Run nq_end before nq_load!");
+		return;
+	}
+
 	if (line->count != 2)
 	{
 		Con_Printf("nq_load [filename] : loads a file containing neural data.");
 		return;
 	}
 
-	char filename[128];
-	strcpy(filename, line->args[1]);
-	strcat(filename, ".txt");
+	Con_Printf("Loading population from file \"%s\"...\n", line->args[1]);
+
+	char filename[256];
+	// Neural save data is stored in neural_backups subfolder.
+	strcpy(filename, "./neural_backups/");
+	strcat(filename, line->args[1]);
+	strcat(filename, ".nq");
 
 	FILE *f = fopen(filename, "r");
 	if (f == NULL)
@@ -549,38 +546,42 @@ void NQ_Load(lparse_t *line)
 	// Read in the global header data.
 	char curline[1024];
 	if (fgets(curline, sizeof(curline), f) != NULL)
-	{
-		char lineCopy[1024];
-		strcpy(lineCopy, curline);
-
-		sscanf(strtok(lineCopy, " \n"), "%d", &generation);
-		sscanf(strtok(NULL, " \n"), "%d", &currSpecies);
-		sscanf(strtok(NULL, " \n"), "%d", &currOrganism);
-
 		population = Population_Init_Load(f);
-	}
 
 	if (!feof(f))
 	{
 		Con_Printf("Error loading data from %s!\n", filename);
+		Population_Delete(population);
+		population = NULL;
+		fclose(f);
 		return;
 	}
 	fclose(f);
 
-	Population_Speciate(population);
+
+	Con_Printf("Generating First Genome with Population\n");
+	species_t *species = population->species->data[0];
+	genome_t *genome = species->genomes->data[0];
+	Genome_Genesis(genome);
+
+	Con_Printf("Activating Genome's Neural Network\n");
+	Genome_Activate(genome);
+
+
 	Con_Printf("Population sucessfully loaded from %s!\n", filename);
 }
 
 void NQ_ForceTimeout()
 {
+	if (!network_on) return;
 	NQ_Timeout();
 }
 
-void NQ_GetInputs()
+void NQ_GetInputs(double *values)
 {
 	// If the client doesn't have entities, it will 
 	// not have the player to trace from. Return.
-	if (sv.max_edicts == 0) return;
+	if (cl.maxclients == 0) return;
 
 	// Rotation delta per cell.
 	double deltaX = r_fovx / NQ_INPUT_COLS, deltaY = r_fovy / NQ_INPUT_ROWS;
@@ -665,117 +666,107 @@ void NQ_GetInputs()
 
 			// We use the plane distance value as a color value, because we don't 
 			// need this information, and we need extra storage for debug colors.
-			trace.plane.dist = 15;
+			trace.plane.dist = 40;
+
+			// Initialize a default node_value of -1.0. This denotes empty space.
+			double node_value = -1.0;
 
 			if (trace.fraction != 1.0) // fraction is 1.0 if nothing was hit.
 			{
 				if (trace.ent->v.solid == SOLID_BSP) // We traced a world clip.
 				{
 					vec3_t up = { 0, 0, 1 };
-					trace.plane.dist = 240 + (int)(4.0 - DotProduct(up, trace.plane.normal) * 4.0);
+
+					// We set floors and ceilings to a range between -1 and 0.
+					// We want them to illicate the opposite response to empty space
+					// (Avoid and look away from floors and ceilings).
+					node_value = (-fabs(DotProduct(up, trace.plane.normal)) + 0.5) * 1.5;
+
+					// We also want to take into account the distance from these
+					// walls, so the further away the wall, the lower the input.
+					node_value *= (1.0 - trace.fraction);
+
+					trace.plane.dist = (int)(239 + node_value * 3);
 				}
 				else // It's an entity of some kind!
 				{
+					node_value = -1.0;
 					trace.plane.dist = 79;
 				}
-			}
-			else // Hit nothing
-			{
-				trace.plane.dist = 40;
+				/*
+				// If we're at 5 specific nodes, look for entities, rather than boundaries.
+				if ((midX && (i == (int)(NQ_INPUT_ROWS * 0.5) || i == (int)(NQ_INPUT_ROWS * 0.4) || i == (int)(NQ_INPUT_ROWS * 0.6))) ||
+					(midY && (j == (int)(NQ_INPUT_COLS * 0.5) || j == (int)(NQ_INPUT_COLS * 0.4) || j == (int)(NQ_INPUT_COLS * 0.6))))
+				{
+					node_value = 1.0;
+					trace.plane.dist = 79;
+				}
+
+				else
+				{
+
+				}
+				*/
 			}
 
-			// Copy trace data to the input data for the frame.
+			values[j + NQ_INPUT_COLS*i] = node_value;
+
+			// Copy trace data to the input data for the frame, so we can draw it later.
 			TraceCopy(&trace, inputs->data[j + NQ_INPUT_COLS*i]);
 		}
 	}
 }
 
-void NQ_Evaluate(organism_t* organism)
+void NQ_Evaluate(genome_t* genome)
 {
 	// Error Handling for null organism.
-	if (organism == NULL)
+	if (genome == NULL)
 	{
 		Con_Printf("NQ ERROR: ATTEMPTED TO EVALUATE ERRONEOUS GENOME.");
 		return;
 	}
-
 	/***** INPUT RETRIEVING *****/
 
 	// New values of each node to be passed into the network.
-	double nodeVals[NQ_INPUT_COUNT];
+	double *input_values = malloc(sizeof(*input_values) * genome->num_in);
 
-	network_t *network = organism->net;
-
-	// Convert input traces into numerical values for network nodes.
-	for (int i = 0; i < inputs->count; i++)
-	{
-		trace_t *trace = inputs->data[i];
-
-		// Default value is 0.0, which will denote a flat ground to walk to. 
-		// Useful because the only time if check will not modify the input is if its empty space.
-		double nodeValue = 0.0;
-
-		if (trace->fraction != 1.0) // fraction is 1.0 if nothing was hit.
-		{
-			if (trace->ent->v.solid == SOLID_BSP) // We traced a world clip.
-			{
-				vec3_t up = { 0, 0, 1 };
-
-				// We want normals parallel to the up axis to be 0.
-				// We also want the range to be between 0.0 and 1.0, so down vectors
-				// will not drive the value up to 2.0 (1.0 - -1.0).
-				nodeValue = (1.0 - DotProduct(up, trace->plane.normal)) / 2;
-			}
-			else // It's an entity of some kind!
-			{
-				// -1.0 is a unique value for entities only.
-				nodeValue = -1.0;
-			}
-		}
-		nodeVals[i] = nodeValue;
-	}
+	// Retrieve information on what the AI can see,
+	// passing it as a double into input_values.
+	NQ_GetInputs(input_values);
 
 	/***** NETWORK PROCESSING *****/
 
-	// Add the node vals to the network.
-	Network_Load_Sensors(network, nodeVals);
+	// Add the input values to the network.
+	Genome_Load_Inputs(genome, input_values);
+	free(input_values);
 
-	cbool success = false;
-
-	// Process the values through the layers and relax network, using depth.
-	for (int i = 0; i <= Network_Max_Depth(network) + 1; i++)
-		success = Network_Activate(network);
+	Genome_Activate(genome);
 
 	// Take the value of each output in the network into the global output vector for use with inputs.
-	for (int i = network->genotype->num_in; i < network->genotype->num_in + network->genotype->num_out; i++)
-	{
-		int index = i - network->genotype->num_in; // MEMORY OVERWRITE IS OCCURRING HERE. FIND OUT WHY.
-		outputs[i - network->genotype->num_in] = ((neuron_t*)network->neurons->data[i])->value;
-	}
+	for (unsigned int i = genome->num_in; i < (unsigned int)(genome->num_in + genome->num_out); i++)
+		outputs[i - genome->num_in] = round(((neuron_t*)genome->neurons->data[i])->value);
 
-	for (int i = 0; i < uilinks->count; i++)
+	// Process output value into the graph HUD element.
+	for (unsigned int i = 0; i < uilinks->count; i++)
 	{
 		uilink_t *uilink = uilinks->data[i];
-		gene_t *gene = uilink->gene;
-		uilink->opacity = !gene->enabled ? 0 : ((neuron_t*)network->genotype->neurons->data[gene->inode])->value == 0 ? 0.1 : 0.6;
+		gene_t *gene = genome->genes->data[uilink->gene];
+		uilink->opacity = !gene->enabled ? 0 : fmin(fmax(fabs(((neuron_t*)genome->neurons->data[gene->inode])->value) * 150, 24), 150);
 	}
-
-	//Network_Flush(network);
 
 	/***** FITNESS EVALUATION *****/
 
-	// This will hold the distances from our new behavior
-
-	int distCount = distStorage->count;
+	// Create a distance array to store the distances for our novelty search algorithm.
+	unsigned int distCount = distance_storage->count;
 
 	// Stored as a pointer array to allow compatibility with Quicksort function.
 	double **distList = malloc(distCount * sizeof(*distList));
 
 	// First get the distance of the point to the rest of the population.
-	for (int i = 0; i < distCount; i++)
+	for (unsigned int i = 0; i < distCount; i++)
 	{
-		double* distance = malloc(sizeof(distance));
-		vec3_t* other = distStorage->data[i];
+		double* distance = malloc(sizeof(*distance));
+		vec3_t* other = distance_storage->data[i];
 		*distance = (double)DistanceBetween2Points(cl_entities[cl.viewentity].origin, *other);
 		distList[i] = distance;
 	}
@@ -788,14 +779,19 @@ void NQ_Evaluate(organism_t* organism)
 	// Compute the sparseness of the point. The average distance away from the genome's point.
 	double sparseness = 0.0;
 	for (unsigned int i = 0; i < (unsigned int)fmin(NQ_NOVELTY_COEFF, distCount); i++)
+	{
 		sparseness += *distList[i];
+		free(distList[i]);
+	}
+
+	free(distList);
 
 	sparseness /= NQ_NOVELTY_COEFF;
 
 	// Assign the sparseness as the base fitness value.
 	fitness = sparseness;
 
-	// Increate the fitness value based on a number of stats.
+	// Increment the fitness value based on a number of stats.
 	fitness += cl.stats[STAT_MONSTERS] * 100; // Monster kills. Single player.
 	fitness += cl.stats[STAT_SECRETS] * 250; // Secrets found. Single player.
 	fitness += cl.stats[STAT_FRAGS] * 500; // Player kills. Multi player.
@@ -803,40 +799,59 @@ void NQ_Evaluate(organism_t* organism)
 	// Lower the final fitness value by a maximum of 80% based on the player's health.
 	fitness = sparseness * (1 - ((1 - cl.stats[STAT_HEALTH] / 100) * 0.8));
 
-	organism->fitness = success ? sparseness : 0.001;
-
-	free(distList);
+	genome->fitness = fitness;
 }
 
 void NQ_NextOrganism()
 {
-	currOrganism++;
+	species_t *species = population->species->data[curr_species];
 
-	species_t *species = population->species->data[currSpecies];
+	Genome_Clear_Nodes(species->genomes->data[curr_genome]);
 
-	// We've finished evaluating the population's organisms.
-	if (currOrganism >= species->organisms->count)
+	curr_genome++;
+	// We've finished evaluating a species' genomes.
+	if (curr_genome >= species->genomes->count)
 	{
-		for (int i = 0; i < population->species->count; i++)
+		// Move on to the next species.
+		curr_species++;
+		curr_genome = 0;
+
+		// Reset the spawn flag, so the position list will be reset on respawn.
+		spawn_set = false;
+
+		// If there is no next species, the generation shall EVOLVE!
+		if (curr_species >= population->species->count)
 		{
-			Species_Compute_Average_Fitness(population->species->data[i]);
-			Species_Compute_Max_Fitness(population->species->data[i]);
+			curr_species = 0;
+
+			Population_Epoch(population);
+
+			// Save the newly created generation. 
+			// We only need the structures to reload a generation, not their results.
+			char buffer[255];
+			char final_cmd[255];
+			sprintf(buffer, "nq_save \"%%Y-%%m-%%d %%H-%%M-%%S %f\"", population->max_fitness);
+
+			const time_t cur_time = time(NULL);
+			strftime(final_cmd, 255, buffer, localtime(&cur_time));
+			lparse_t *line = Line_Parse_Alloc(final_cmd, false);
+			NQ_Save(line);
+			Line_Parse_Free(line);
 		}
-
-		Population_Epoch(population, ++generation);
-
-		for (int i = 0; i < population->organisms->count; i++)
-			Organism_Update_Phenotype(population->organisms->data[i]);
-
-		currOrganism = 0;
 	}
 
-	UI_RefreshGraph(species->organisms->data[currOrganism]);
+	species = population->species->data[curr_species];
+
+	// Generate neurons for next genome to be evaluated.
+	Genome_Genesis(species->genomes->data[curr_genome]);
+
+	// Refresh the graph with the new genome.
+	UI_RefreshGraph(species->genomes->data[curr_genome]);
 
 	char map_cmd[128] = "map ";
 
 	// The reload the level in single player, otherwise kill the bot.
-	if (svs.maxclients == 1)
+	if (cl.maxclients == 1)
 	{
 		strcat(map_cmd, cl.worldname);
 		Cmd_ExecuteString(map_cmd, src_command);
@@ -849,26 +864,36 @@ void NQ_NextOrganism()
 
 void NQ_Timeout()
 {
-	species_t *species = population->species->data[currSpecies];
-	organism_t *organism = species->organisms->data[currOrganism];
+	species_t *species = population->species->data[curr_species];
+	genome_t *genome = species->genomes->data[curr_genome];
 
 	// Add the in-game clock timer to the organism when done.
-	organism->time_alive = cl.time;
+	// genome->time_alive = cl.time;
 
 	// Store the player's current position as the organisms final position.
-	VectorCopy(cl_entities[cl.viewentity].origin, organism->gnome->final_pos);
+	VectorCopy(cl_entities[cl.viewentity].origin, genome->final_pos);
 
 	// Add the final position of the organism to the global list.
-	vec3_t *final_pos = malloc(sizeof(vec3_t));
+	vec3_t *final_pos = malloc(sizeof(*final_pos));
 
 	*(*final_pos + 0) = cl_entities[cl.viewentity].origin[0];
 	*(*final_pos + 1) = cl_entities[cl.viewentity].origin[1];
 	*(*final_pos + 2) = cl_entities[cl.viewentity].origin[2];
 
-	vector_add(distStorage, final_pos);
+	vector_push(distance_storage, final_pos);
 
 	timeout = 0;
+	timeout_moving = 0;
 	timestep = 0;
+
+	// Disable all inputs on timeout.
+	for (unsigned char i = 0; i < NQ_OUTPUT_COUNT; i++)
+	{
+		char output_cmd[80];
+		strcpy(output_cmd, "-");
+		strcat(output_cmd, output_cmds[i]);
+		Cmd_ExecuteString(output_cmd, src_client);
+	}
 
 	NQ_NextOrganism();
 }
@@ -886,56 +911,53 @@ void Draw_NeuralStats()
 
 	if (population != 0)
 	{
-		c_snprintf2(str, "Input Row/Col|  %4i %4i", NQ_INPUT_ROWS, NQ_INPUT_COLS);
+		c_snprintf2(str, "Input Row/Col |  %4i %4i", NQ_INPUT_ROWS, NQ_INPUT_COLS);
 		Draw_String(x, (y++) * 8 - x, str);
 
-		c_strlcpy(str, "NEURAL STATS |  Curr Best  ");
+		c_strlcpy(str, "NEURAL STATS  |  Curr Total ");
 		Draw_String(x, (y++) * 8 - x, str);
 
-		c_strlcpy(str, "-------------+-------------");
+		c_strlcpy(str, "--------------+-------------");
 		Draw_String(x, (y++) * 8 - x, str);
 
-		species_t *species = population->species->data[currSpecies];
-		organism_t *organism = species->organisms->data[currOrganism];
-		if (organism != 0)
+		species_t *species = population->species->data[curr_species];
+		genome_t *genome = species->genomes->data[curr_genome];
+		if (genome != 0)
 		{
 			// Get stats from the population to enter into the graph.
-			int bestSpeciesID = 0; // The best species in the population.
-			int bestOrgID = 0; // The champion organism in the population.
-			double bestOrgTime = 0.0; // The longest time an organism has lived.
+			int best_species_id = 0; // The best species in the population.
+			int best_genome_id = 0; // The champion organism in the population.
 
-			species_t* bestSpecies = 0;
-			for (int i = 0; i < population->species->count; i++)
+			species_t* best_species = 0;
+			for (unsigned int i = 0; i < population->species->count; i++)
 			{
 				species_t *species = population->species->data[i];
 
-				if (bestSpecies == 0 || bestSpecies->peak_fitness < species->peak_fitness)
+				if (best_species == 0 || best_species->peak_fitness < species->peak_fitness)
 				{
-					bestSpecies = species;
-					bestSpeciesID = species->id;
+					best_species = species;
+					best_species_id = i;
 				}
 			}
-			for (int i = 0; i < population->organisms->count; i++)
-			{
-				organism_t *curOrg = population->organisms->data[i];
-				if (curOrg->champion) bestOrgID = i;
+			//for (int i = 0; i < population->genomes->count; i++)
+			//{
+			//	genome_t *cur_genome = population->genomes->data[i];
+			//	//if (cur_genome->champion) best_genome_id = i;
+			//}
 
-				if (curOrg->time_alive > bestOrgTime) bestOrgTime = curOrg->time_alive;
-			}
+			//c_snprintf2(str, "Time         |  %4i %4i", (int)organism->time_alive, (int)bestOrgTime);
+			//Draw_String(x, (y++) * 8 - x, str);
 
-			c_snprintf2(str, "Time         |  %4i %4i", (int)organism->time_alive, (int)bestOrgTime);
+			c_snprintf(str,  "Fitness       |  %4i", genome->fitness);
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_snprintf2(str, "Fitness      |  %4i %4i", (int)organism->fitness, (int)organism->species->peak_fitness);
+			c_snprintf2(str, "Genome        |  %4i %4i", curr_genome + 1, species->genomes->count);
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_snprintf2(str, "Genome       |  %4i %4i", currOrganism, bestOrgID);
+			c_snprintf2(str, "Species       |  %4i %4i", curr_species + 1, population->species->count);
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_snprintf2(str, "Species      |  %4i %4i", organism->species->id, bestSpeciesID);
-			Draw_String(x, (y++) * 8 - x, str);
-
-			c_snprintf2(str, "Generation   |  %4i %4i", organism->generation, population->winnergen);
+			c_snprintf2(str, "Generation    |  %4i %4i", population->generation + 1, ((population->winner_generation != 0) ? population->winner_generation + 1 : 0));
 			Draw_String(x, (y++) * 8 - x, str);
 
 			//c_snprintf2(str,	"Percentage   |  %4i %4i", 1, 1);
@@ -943,16 +965,16 @@ void Draw_NeuralStats()
 		}
 		else
 		{
-			c_strlcpy(str, "Genome       |  -- --");
+			c_strlcpy(str, "Genome       |   -  -");
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_strlcpy(str, "Species      |  -- --");
+			c_strlcpy(str, "Species      |   -  -");
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_strlcpy(str, "Fitness      |  -- --");
+			c_strlcpy(str, "Fitness      |   -  -");
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_strlcpy(str, "Generation   |  -- --");
+			c_strlcpy(str, "Generation   |   -  -");
 			Draw_String(x, (y++) * 8 - x, str);
 		}
 	}
@@ -965,122 +987,115 @@ void Draw_NeuralGraph()
 
 	if (population != 0)
 	{
-		Draw_Fill(NQ_GRAPH_POSX, NQ_GRAPH_POSY, NQ_GRAPH_WIDTH, NQ_GRAPH_HEIGHT * 1.9, 0, 0.5);
+		Draw_Fill(NQ_GRAPH_POSX, NQ_GRAPH_POSY, NQ_GRAPH_WIDTH, NQ_GRAPH_HEIGHT, 0, 0.5);
 
-		species_t *species = population->species->data[currSpecies];
-		organism_t *organism = species->organisms->data[currOrganism];
+		species_t *species = population->species->data[curr_species];
+		genome_t *genome = species->genomes->data[curr_genome];
 
 		// Draw all nodes in the network here.
 		if (uinodes != 0 && uinodes->count > 0)
 		{
 			if (inputs != 0 && inputs->count > 0)
 			{
-				for (int i = 0; i < organism->net->genotype->num_in; i++)
+				for (int i = 0; i < genome->num_in; i++)
 				{
 					uinode_t *uinode = uinodes->data[i];
 					trace_t *trace = inputs->data[i];
 
-					Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, (i != organism->net->genotype->num_in-1) ? trace->plane.dist : uinode->color, 1);
+					Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, (i != genome->num_in-1) ? trace->plane.dist : uinode->color, 1.0f);
 				}
 			}
 
 			// Draw all nodes between the input and the output.
-			for (int i = organism->net->genotype->num_in + organism->net->genotype->num_out; i < uinodes->count; i++)
+			for (unsigned int i = genome->num_in + genome->num_out; i < uinodes->count; i++)
 			{
 				uinode_t *uinode = uinodes->data[i];
-				if (uinode != 0) Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, uinode->color, 1);
+				if (uinode != 0) Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, uinode->color, 1.0f);
 			}
 
 			// Draw each output in spots resembling a controller
 			if (outputs != 0)
 			{
 				// Draw output nodes.
-				for (int i = organism->net->genotype->num_in; i < organism->net->genotype->num_in + organism->net->genotype->num_out; i++)
+				for (unsigned int i = genome->num_in; i < (unsigned int)(genome->num_in + genome->num_out); i++)
 				{
 					uinode_t *uinode = uinodes->data[i];
-					Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, outputs[i - organism->net->genotype->num_in] > 0.5 ? 251 : 248, 1);
+					Draw_Square(uinode->x, uinode->y, uinode->sizex, uinode->sizey, 1, outputs[i - genome->num_in] > 0.5 ? 251 : 248, 1.0f);
 				}
 
 				// Draw output labels.
-				Draw_String(NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE * 0.85, NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) + NQ_GRAPH_OUTBOX_SIZE * 0.15, "Move");
-				Draw_String(NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.5 - (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) * 2.25, NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE * 0.35, "Attack");
-				Draw_String(NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.5 + (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) * 0.35, NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) - NQ_GRAPH_OUTBOX_SIZE * 0.35, "Jump");
-				Draw_String(NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 2.25, NQ_GRAPH_POSY + (NQ_GRAPH_HEIGHT * NQ_GRAPH_OUTPUT_HEIGHT) + NQ_GRAPH_OUTBOX_SIZE * 0.15, "Look");
+				Draw_String(NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.025 + NQ_GRAPH_OUTBOX_SIZE * 0.85, NQ_GRAPH_POSY + NQ_GRAPH_OUTPUT_Y + NQ_GRAPH_OUTBOX_SIZE * 1.15, "Move");
+				Draw_String(NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.5 - (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) * 2.25, NQ_GRAPH_POSY + NQ_GRAPH_OUTPUT_Y + NQ_GRAPH_OUTBOX_SIZE * 0.65, "Attack");
+				Draw_String(NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.5 + (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) * 0.35, NQ_GRAPH_POSY + NQ_GRAPH_OUTPUT_Y + NQ_GRAPH_OUTBOX_SIZE * 0.65, "Jump");
+				Draw_String(NQ_GRAPH_POSX + NQ_GRAPH_WIDTH * 0.975 - NQ_GRAPH_OUTBOX_SIZE * 2.25, NQ_GRAPH_POSY + NQ_GRAPH_OUTPUT_Y + NQ_GRAPH_OUTBOX_SIZE * 1.15, "Look");
 			}
 		}
 
 		// Draw all existing links between hidden nodes in the network. 
 		if (uilinks != 0 && uilinks->count > 0)
 		{
-			for (int i = 0; i < uilinks->count; i++)
+			for (unsigned int i = 0; i < uilinks->count; i++)
 			{
 				uilink_t *uilink = uilinks->data[i];
-				Draw_Line(uilink->start->x + NQ_GRAPH_INBOX_WIDTH / 2, uilink->start->y + NQ_GRAPH_INBOX_HEIGHT, 
-					uilink->end->x + NQ_GRAPH_INBOX_WIDTH / 2, uilink->end->y, 1, uilink->color, uilink->opacity);
+				uinode_t *inode = uinodes->data[uilink->inode];
+				uinode_t *onode = uinodes->data[uilink->onode];
+				Draw_Line(inode->x + (NQ_GRAPH_INBOX_WIDTH - NQ_GRAPH_BOX_PADDING) / 2, inode->y + (NQ_GRAPH_INBOX_HEIGHT - NQ_GRAPH_BOX_PADDING) / 2,
+						  onode->x + (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) / 2, onode->y + (NQ_GRAPH_OUTBOX_SIZE - NQ_GRAPH_BOX_PADDING) / 2, 1, uilink->color, (float)uilink->opacity/255.0f);
 			}
 		}
 	}
 }
 
-void UI_RefreshGraph(organism_t *organism)
+void UI_RefreshGraph(genome_t *genome)
 {
-	// Remove all hidden UI nodes from the vector. Except for the input bias.
-	for (int i = uinodes->count - 1; i > organism->net->genotype->num_in + organism->net->genotype->num_out; i--)
+	// Remove all hidden UI nodes from the vector. 
+	// We will re-add them /IF/ they still exist.
+	for (int i = uinodes->count - 1; i > genome->num_in + genome->num_out; i--)
 	{
 		free(uinodes->data[i]);
 		uinodes->data[i] = NULL;
 		uinodes->count--;
 	}
 
-	vector_free(uilinks);
-
-	for (int i = 0; i < organism->net->genotype->num_in; i++)
-		((uinode_t*)uinodes->data[i])->node = organism->net->neurons->data[i];
-
-	// Refresh all hidden layer nodes, also linking them between their inputs and outputs.
-	for (int i = organism->net->genotype->num_in; i < organism->net->neurons->count; i++)
+	// Add all existing hidden layer nodes to uinodes.
+	for (unsigned int i = genome->num_in + genome->num_out; i < genome->neurons->count; i++)
 	{
-		neuron_t *node = organism->net->neurons->data[i];
-		uinode_t *uinode = 0;
+		uinode_t *uinode = (uinode_t*)malloc(sizeof(uinode_t));
+		vector_push(uinodes, uinode);
 
-		if (uinodes->count <= i || uinodes->data[i] == NULL)
-		{
-			uinode = malloc(sizeof(uinode_t));
-			vector_add(uinodes, uinode);
-		}
-		else
-		{
-			uinode = uinodes->data[i];
-		}
+		// Calculate the nodes position within the grid.
+		int x = ((i - (genome->num_in + genome->num_out)) % NQ_INPUT_COLS),
+			y = (i - (genome->num_in + genome->num_out)) / NQ_INPUT_COLS;
 
-		uinode->node = node;
+		// Update our hidden layer nodes variables.
+		uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_BOX_PADDING + x * NQ_GRAPH_INBOX_WIDTH;
+		uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HIDDEN_Y + NQ_GRAPH_BOX_PADDING + y * NQ_GRAPH_INBOX_HEIGHT;
+		uinode->sizex = NQ_GRAPH_INBOX_WIDTH - NQ_GRAPH_BOX_PADDING;
+		uinode->sizey = NQ_GRAPH_INBOX_HEIGHT - NQ_GRAPH_BOX_PADDING;
 
-		if (i >= organism->net->genotype->num_in + organism->net->genotype->num_out)
-		{
-			int x = ((i - (organism->net->genotype->num_in + organism->net->genotype->num_out)) % NQ_INPUT_COLS),
-				y = (i - (organism->net->genotype->num_in + organism->net->genotype->num_out + 1)) / NQ_INPUT_COLS;
-
-			uinode->x = NQ_GRAPH_POSX + NQ_GRAPH_BOX_PADDING + x * NQ_GRAPH_INBOX_WIDTH;
-			uinode->y = NQ_GRAPH_POSY + NQ_GRAPH_HEIGHT * NQ_GRAPH_HIDDEN_HEIGHT + NQ_GRAPH_BOX_PADDING + y * NQ_GRAPH_INBOX_HEIGHT;
-			uinode->sizex = NQ_GRAPH_INBOX_WIDTH - NQ_GRAPH_BOX_PADDING;
-			uinode->sizey = NQ_GRAPH_INBOX_HEIGHT - NQ_GRAPH_BOX_PADDING;
-
-			uinode->color = 63;
-		}
+		// Hidden nodes will be a soft green / yellow.
+		uinode->color = 63;
 	}
 
-	for (int i = 0; i < organism->gnome->genes->count; i++)
+	// Clear out genes from previous genome.
+	for (unsigned int i = 0; i < uilinks->count; i++)
+		free(uilinks->data[i]);
+
+	vector_free(uilinks);
+
+	// Add the genes from the current genome in.
+	for (unsigned int i = 0; i < genome->genes->count; i++)
 	{
-		gene_t *gene = organism->gnome->genes->data[i];
-		uilink_t *uilink = malloc(sizeof(uilink_t));
+		gene_t *gene = genome->genes->data[i];
+		uilink_t *uilink = (uilink_t*)malloc(sizeof(uilink_t));
 
-		uilink->start = uinodes->data[gene->inode];
-		uilink->end = uinodes->data[gene->onode];
+		uilink->inode = gene->inode;
+		uilink->onode = gene->onode;
 		uilink->color = gene->weight > 0 ? 63 : gene->weight < 0 ? 79 : 7;
-		uilink->opacity = !gene->enabled ? 0.0 : 0.1;
-		uilink->gene = gene;
+		uilink->opacity = 24;
+		uilink->gene = i;
 
-		vector_add(uilinks, uilink);
+		vector_push(uilinks, uilink);
 	}
 }
 
@@ -1148,7 +1163,7 @@ double Random_Gauss() {
 
 int Random_Int(int x, int y)
 { 
-	return rand() % (y - x + 1) + x;
+	return x == y ? x : rand() % (y - x + 1) + x;
 }
 
 float Random_Float()

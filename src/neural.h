@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 // Defining base struct, which will be fleshed out via include later on.
-typedef struct organism_s organism_t;
+typedef struct genome_s genome_t;
 
 // ****** ENGINE HOOK FUNCTIONS ******
 // These functions are called from within the engine, and
@@ -103,10 +103,10 @@ void NQ_ForceTimeout();
 // Should not be called outside of the neural network space.
 
 // Retrives information from the world for use within the neural network.
-void NQ_GetInputs();
+void NQ_GetInputs(double *values);
 
 // Evaluates an organism within the neural network against the current input.
-void NQ_Evaluate(organism_t* organism);
+void NQ_Evaluate(genome_t* genome);
 
 // Iterates to the next organism within the network
 void NQ_NextOrganism();
@@ -126,7 +126,7 @@ void Draw_NeuralGraph();
 
 // Refreshes the hidden node data and node link data within the 
 // neural graph to match that of the organism argument.
-void UI_RefreshGraph(organism_t* organism);
+void UI_RefreshGraph(genome_t* genome);
 
 // Getter function to determine whether the neural network is active.
 cbool NQ_IsEnabled();

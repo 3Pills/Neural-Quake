@@ -27,10 +27,10 @@ int vector_count(vector *v)
 	return v->count;
 }
 
-void vector_add(vector *v, void *e)
+void vector_push(vector *v, void *e)
 {
 	if (v->size == 0) {
-		v->size = 10;
+		v->size = 8;
 		v->data = calloc(v->size, sizeof(void*));
 	}
 
@@ -48,10 +48,16 @@ void vector_add(vector *v, void *e)
 	v->count++;
 }
 
-void vector_insert(vector *v, int index, void *e)
+void *vector_pop(vector *v)
+{
+	v->data[v->count - 1] = '\0';
+	v->count--;
+}
+
+void vector_insert(vector *v, unsigned int index, void *e)
 {
 	if (v->size == 0) {
-		v->size = 10;
+		v->size = 8;
 		v->data = calloc(v->size, sizeof(void*));
 	}
 
@@ -64,7 +70,7 @@ void vector_insert(vector *v, int index, void *e)
 
 			v->data = realloc(v->data, sizeof(void*) * v->size);
 		}
-		for (int i = v->count; i < index; i++)
+		for (unsigned int i = v->count; i < index; i++)
 			v->data[i] = 0;
 
 		v->count = index + 1;
@@ -87,7 +93,7 @@ void vector_insert(vector *v, int index, void *e)
 	v->data[index] = e;
 }
 
-void vector_set(vector *v, int index, void *e)
+void vector_set(vector *v, unsigned int index, void *e)
 {
 	if (index >= v->count) {
 		return;
@@ -96,7 +102,7 @@ void vector_set(vector *v, int index, void *e)
 	v->data[index] = e;
 }
 
-void *vector_get(vector *v, int index)
+void *vector_get(vector *v, unsigned int index)
 {
 	if (index >= v->count) {
 		return NULL;
@@ -105,16 +111,16 @@ void *vector_get(vector *v, int index)
 	return v->data[index];
 }
 
-void *vector_delete(vector *v, int index)
+void *vector_delete(vector *v, unsigned int index)
 {
 	if (index >= v->count) {
 		return 0;
 	}
 
-	for (int i = index; i < v->count-1; i++)
+	for (unsigned int i = index; i < v->count-1; i++)
 		v->data[i] = v->data[i+1];
 
-	v->data[v->count] = 0;
+	v->data[v->count-1] = '\0';
 	v->count--;
 
 	return v->data[index];
@@ -122,7 +128,7 @@ void *vector_delete(vector *v, int index)
 
 void vector_clear(vector *v)
 {
-	for (int i = 0; i < v->count; i++)
+	for (unsigned int i = 0; i < v->count; i++)
 		v->data[i] = 0;
 
 	v->count = 0;

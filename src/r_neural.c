@@ -1,8 +1,27 @@
+/*
+Copyright (C) 2016 Stephen Koren
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+*/
 #include "quakedef.h"
 #include "r_neural.h"
 
 #if defined(DIRECT3D_WRAPPER)
-void Draw_Line(int x1, int y1, int x2, int y2, float thickness, int c, int alpha)
+void Draw_Line(unsigned short x1, unsigned short y1, unsigned short x2, unsigned short y2, float thickness, unsigned char c, float alpha)
 {
 	byte *pal = (byte *)vid.d_8to24table;
 
@@ -18,7 +37,7 @@ void Draw_Line(int x1, int y1, int x2, int y2, float thickness, int c, int alpha
 	eglEnable(GL_TEXTURE_2D);
 }
 
-void Draw_Square(int x, int y, int w, int h, float thickness, int c, int alpha)
+void Draw_Square(unsigned short x, unsigned short y, unsigned short w, unsigned short h, float thickness, unsigned char c, float alpha)
 {
 	byte *pal = (byte *)vid.d_8to24table;
 
@@ -40,7 +59,7 @@ void Draw_Square(int x, int y, int w, int h, float thickness, int c, int alpha)
 	eglEnable(GL_TEXTURE_2D);
 }
 #elif defined(GLQUAKE)
-void Draw_Line(int x1, int y1, int x2, int y2, float thickness, int c, float alpha)
+void Draw_Line(unsigned short x1, unsigned short y1, unsigned short x2, unsigned short y2, float thickness, unsigned char c, float alpha)
 {
 	byte *pal = (byte *)vid.d_8to24table;
 
@@ -62,7 +81,7 @@ void Draw_Line(int x1, int y1, int x2, int y2, float thickness, int c, float alp
 	eglEnable(GL_TEXTURE_2D);
 }
 
-void Draw_Square(int x, int y, int w, int h, float thickness, int c, float alpha)
+void Draw_Square(unsigned short x, unsigned short y, unsigned short w, unsigned short h, float thickness, unsigned char c, float alpha)
 {
 	byte *pal = (byte *)vid.d_8to24table;
 
@@ -85,7 +104,7 @@ void Draw_Square(int x, int y, int w, int h, float thickness, int c, float alpha
 	eglEnable(GL_TEXTURE_2D);
 }
 
-void R_DrawPoint (vec3_t origin, int size, int c)
+void R_DrawPoint (vec3_t origin, double size, unsigned char c)
 {
 	byte *pal = (byte *)vid.d_8to24table;
 	eglColor3f(pal[c * 4] / 255.0, pal[c * 4 + 1] / 255.0, pal[c * 4 + 2] / 255.0);
@@ -108,7 +127,7 @@ void R_DrawPoint (vec3_t origin, int size, int c)
 	eglEnable(GL_TEXTURE_2D);
 }
 
-void R_DrawWireBox(vec3_t origin, vec3_t mins, vec3_t maxs, int c)
+void R_DrawWireBox(vec3_t origin, vec3_t mins, vec3_t maxs, unsigned char c)
 {
 	VectorAdd(origin, mins, mins);
 	VectorAdd(origin, maxs, maxs);
@@ -150,72 +169,7 @@ void R_DrawWireBox(vec3_t origin, vec3_t mins, vec3_t maxs, int c)
 }
 
 #else
-
-//{
-//	// Clamping?
-//	// Baker: Alpha is ignored at this time
-//	int x = _x + canvas.x; // Baker: Canvas
-//	int y = _y + canvas.y; // Baker: Canvas
-//#if 0
-//	int x = CLAMP(0, _x + canvas.x, vid.width - 1)
-//		int y = CLAMP(0, _y + canvas.y, vid.height - 1)
-//		int w = CLAMP(0, _w, vid.width - x);  // draw at 350 w 100 vidwidth 400 so 399 is max.  w = 400-1-350=49
-//	int h = CLAMP(0, _h, vid.height - y);
-//#endif
-//	byte			*dest;
-//	int				u, v;
-//
-//	dest = vid.buffer + y*vid.rowbytes + x;
-//	for (v = 0; v < h; v++, dest += vid.rowbytes)
-//		for (u = 0; u < w; u++)
-//			dest[u] = c;
-//}
-
-void Draw_Line(int _x1, int _y1, int _x2, int _y2, float thickness, int c, int alpha)
-/*{
-	int dx, dy, p, end;
-	float x, y;
-
-	int x1 = _x1 + canvas.x;
-	int y1 = _y1 + canvas.y;
-	int x2 = _x2 + canvas.x;
-	int y2 = _y2 + canvas.y;
-
-	dx = abs(x1 - x2);
-	dy = abs(y1 - y2);
-	p = 2 * dy - dx;
-	if (x1 > x2)
-	{
-		x = x2;
-		y = y2;
-		end = x1;
-	}
-	else
-	{
-		x = x1;
-		y = y1;
-		end = x2;
-	}
-
-	byte *dest = vid.buffer + (int)y*vid.rowbytes;
-	dest[(int)x] = c;
-	while (x < end)
-	{
-		x = x + 1;
-		if (p < 0)
-		{
-			p = p + 2 * dy;
-		}
-		else
-		{
-			y = y + 1;
-			p = p + 2 * (dy - dx);
-		}
-		putpixel(x, y, 10);
-	}
-}
-
-*/
+void Draw_Line(unsigned short x1, unsigned short y1, unsigned short x2, unsigned short y2, float thickness, unsigned char c, float alpha)
 {
 	float x1 = CLAMP(0, _x1 + canvas.x, canvas.width);
 	float y1 = CLAMP(0, _y1 + canvas.y, canvas.height);
@@ -275,7 +229,7 @@ void Draw_Line(int _x1, int _y1, int _x2, int _y2, float thickness, int c, int a
 	}
 }
 
-void Draw_Square(int _x, int _y, int w, int h, float thickness, int c, int alpha)
+void Draw_Square(unsigned short x, unsigned short y, unsigned short w, unsigned short h, float thickness, unsigned char c, float alpha)
 {
 	int min_x = _x + canvas.x;
 	int min_y = _y + canvas.y;

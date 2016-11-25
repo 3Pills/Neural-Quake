@@ -764,6 +764,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 			if (cmd)
 			{
 				cmd->function (line);
+				Line_Parse_Free(line); // stephenkoren: memory leak right here...
 				return;
 			}
 		}
@@ -786,6 +787,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 			if (alias)
 			{
 				Cbuf_InsertText (alias->value);
+				Line_Parse_Free(line); // stephenkoren: memory leak right here...
 				return;
 			}
 		}
@@ -809,6 +811,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 			if (var)
 			{
 				Cvar_Command (cmd_from_server, var, line);
+				Line_Parse_Free(line); // stephenkoren: memory leak right here...
 				return;
 			}
 		}

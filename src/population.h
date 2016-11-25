@@ -24,36 +24,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct population_s
 {
-	vector* organisms; // Contains: organism_t. Vector array of organisms in the population.
-	vector* species;  // Contains: species_t. Vector array of species in the Population. Note that the species should comprise all the genomes 
-	vector* innovations; // Contains: innovations_t. Vector array of generation innovations.
+	vector* species; // Contains: species_t*. Vector array of species in the Population.
 
-	// ******* Member variables used during reproduction *******
-	int cur_node_id;  //Current label number available
-	double cur_innov_num;
+	unsigned int innovation;
+	unsigned int generation;
+	unsigned int winner_generation; // The winning generation. Set when the player completes the level for the first time.
 
-	int last_species;  //The highest species number
-
-	// ******* Fitness Statistics *******
-	double mean_fitness;
-	double variance;
-	double standard_deviation;
-
-	int winnergen; //An integer that when above zero tells when the first winner appeared
-
-	// ******* When do we need to delta code? *******
-	double highest_fitness;  //Stagnation detector
-	int highest_last_changed; //If too high, leads to delta coding
+	double max_fitness;
 } population_t;
 
 // Construct off of a single spawning Genome 
-population_t *Population_Init(genome_t *g, int size);
-
-// Construct off of a single spawning Genome without mutation
-population_t *Population_Init_No_Mutation(genome_t *g, int size, float power);
-
-// Construct off of a vector of genomes with a mutation rate of "power"
-population_t *Population_Init_From_List(vector *genomeList, float power);
+population_t *Population_Init(genome_t *g, unsigned int size);
 
 // Construct from file data.
 population_t *Population_Init_Load(FILE *f);
@@ -61,29 +42,33 @@ population_t *Population_Init_Load(FILE *f);
 // Deconstructor
 void Population_Delete(population_t *pop);
 
-// Spawn population from a single genome. 
-cbool Population_Spawn(population_t *pop, genome_t *g, int size);
+// Increments innovation number and returns the value.
+unsigned int Population_New_Innovation(population_t *pop);
 
-// Seperate organisms into species.
-cbool Population_Speciate(population_t *pop);
-
-// Run verify on all genomes in this population
-cbool Population_Verify(population_t *pop);
+// Adds a genome to an existing compaible species, or a new species otherwise.
+void Population_Speciate(population_t *pop, genome_t *genome);
 
 // Clone population from a genome.
-cbool Population_Clone(population_t *pop, genome_t *g, int size, float power);
+cbool Population_Clone(population_t *pop, genome_t *g, unsigned int size, float power);
 
 // Compute the sparseness of a genome from other genomes in the population.
 double Population_Compute_Sparseness(genome_t *genome);
 
-// Turnover the population to a new generation using fitness 
-// The generation argument is the next generation
-cbool Population_Epoch(population_t *pop, int generation);
+// Compute the average fitness of every species in the population.
+double Population_Average_Fitness(population_t *pop);
 
-// Places the organisms in species in order from best to worst fitness 
-cbool Population_Rank_Within_Species(population_t *pop);
+// Ranks the genomes within the population by their fitness.
+void Population_Rank_Genomes(population_t *pop);
+
+// Removes the less fit genomes in a species. champ_only to remove all but the best.
+void Population_Cull(population_t *pop, cbool champ_only);
+
+// Turnover the population to a new generation using fitness.
+cbool Population_Epoch(population_t *pop);
 
 // Prints population to file, by species.
-cbool Population_FPrint(population_t* pop, FILE* f);
+cbool Population_Save(population_t* pop, FILE* f);
+
+vector *Population_Get_Sorted_Species(population_t *pop);
 
 #endif //!__POPULATION_H__

@@ -431,16 +431,10 @@
     <ClInclude Include="src\neural_def.h">
       <Filter>Source Files\Neural AI</Filter>
     </ClInclude>
-    <ClInclude Include="src\link.h">
-      <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClInclude>
     <ClInclude Include="src\gene.h">
       <Filter>Source Files\Neural AI\Type Definitions</Filter>
     </ClInclude>
     <ClInclude Include="src\genome.h">
-      <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClInclude>
-    <ClInclude Include="src\network.h">
       <Filter>Source Files\Neural AI\Type Definitions</Filter>
     </ClInclude>
     <ClInclude Include="src\neuron.h">
@@ -449,23 +443,11 @@
     <ClInclude Include="src\vector.h">
       <Filter>Source Files\Neural AI\Utility</Filter>
     </ClInclude>
-    <ClInclude Include="src\organism.h">
-      <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClInclude>
     <ClInclude Include="src\species.h">
-      <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClInclude>
-    <ClInclude Include="src\trait.h">
-      <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClInclude>
-    <ClInclude Include="src\innovation.h">
       <Filter>Source Files\Neural AI\Type Definitions</Filter>
     </ClInclude>
     <ClInclude Include="src\population.h">
       <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClInclude>
-    <ClInclude Include="src\evolution.h">
-      <Filter>Source Files\Neural AI</Filter>
     </ClInclude>
     <ClInclude Include="src\r_neural.h">
       <Filter>Source Files\Neural AI\Utility</Filter>
@@ -979,35 +961,17 @@
     <ClCompile Include="src\genome.c">
       <Filter>Source Files\Neural AI\Type Definitions</Filter>
     </ClCompile>
-    <ClCompile Include="src\link.c">
-      <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClCompile>
-    <ClCompile Include="src\network.c">
-      <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClCompile>
     <ClCompile Include="src\neuron.c">
       <Filter>Source Files\Neural AI\Type Definitions</Filter>
     </ClCompile>
     <ClCompile Include="src\vector.c">
       <Filter>Source Files\Neural AI\Utility</Filter>
     </ClCompile>
-    <ClCompile Include="src\organism.c">
-      <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClCompile>
     <ClCompile Include="src\species.c">
-      <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClCompile>
-    <ClCompile Include="src\trait.c">
-      <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClCompile>
-    <ClCompile Include="src\innovation.c">
       <Filter>Source Files\Neural AI\Type Definitions</Filter>
     </ClCompile>
     <ClCompile Include="src\population.c">
       <Filter>Source Files\Neural AI\Type Definitions</Filter>
-    </ClCompile>
-    <ClCompile Include="src\evolution.c">
-      <Filter>Source Files\Neural AI</Filter>
     </ClCompile>
     <ClCompile Include="src\r_neural.c">
       <Filter>Source Files\Neural AI\Utility</Filter>

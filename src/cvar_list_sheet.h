@@ -148,9 +148,6 @@ CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_speeds                  , "r_s
 CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_stains                  , "r_stains"                , "1"       , CVAR_ARCHIVE      , Stain_Change_f       ,  ""            )
 CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_stains_fadeamount       , "r_stains_fadeamount"     , "1"       , CVAR_NONE         , NULL                 ,  ""            )
 CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_stains_fadetime         , "r_stains_fadetime"       , "1"       , CVAR_NONE         , NULL                 ,  ""            )
-CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_neural_color_1          , "r_neural_color_1"        , "251"     , CVAR_NONE         , NULL                 ,  ""            ) // stephenkoren -- First color used within neural network debug drawing.
-CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_neural_color_2          , "r_neural_color_2"        , "192"     , CVAR_NONE         , NULL                 ,  ""            ) // stephenkoren -- Second color used within neural network debug drawing.
-CVAR_DEF( R_Init      , SCENE     ,  DEP_NONE , r_neural_alpha	          , "r_neural_alpha"	      , "1"		  , CVAR_NONE         , NULL                 ,  ""            ) // stephenkoren -- Alpha used within neural network debug drawing.
 CVAR_DEF( D_Init      , SCENE     ,  DEP_SW   , sw_d_mipscale             , "d_mipscale"              , "1"       , CVAR_NONE         , NULL                 ,  ""            )
 CVAR_DEF( D_Init      , SCENE     ,  DEP_SW   , sw_d_subdiv16             , "d_subdiv16"              , "1"       , CVAR_NONE         , NULL                 ,  ""            )
 CVAR_DEF( R_Init      , SCENE     ,  DEP_SW   , sw_r_aliasstats           , "r_polymodelstats"        , "0"       , CVAR_NONE         , NULL                 ,  ""            )
@@ -342,5 +339,9 @@ CVAR_DEF( View_Init   , VIEW      ,  DEP_NONE , v_polyblend               , "gl_
 CVAR_DEF( View_Init   , VIEW      ,  DEP_NONE , v_polyblend_lite          , "v_polyblend_lite"        , "0"       , CVAR_ARCHIVE | CVAR_CLIENT , R_PolyBlendChanged_f, ""           )  // Baker: --> // JPG 3.30 - winquake version of r_polyblend
 
 
-
+//stephenkoren -- added neural network cvars
+CVAR_DEF( NQ_Init , CLIENT    , DEP_NONE  , nq_color_1                , "nq_color_1"              , "251"     , CVAR_NONE         , NULL                 , ""             ) // First color used within neural network debug drawing.
+CVAR_DEF( NQ_Init , CLIENT    , DEP_NONE  , nq_color_2                , "nq_color_2"              , "192"     , CVAR_NONE         , NULL                 , ""             ) // Second color used within neural network debug drawing.
+CVAR_DEF( NQ_Init , CLIENT    , DEP_NONE  , nq_alpha                  , "nq_alpha"                , "1"       , CVAR_NONE         , NULL                 , ""             ) // Alpha used within neural network debug drawing.
+//stephenkoren
 #undef CVAR_DEF

@@ -20,71 +20,43 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __SPECIES_H__
 #define __SPECIES_H__
 
-#include "organism.h"
+#include "genome.h"
 
 // Forward declaration of population_t.
 typedef struct population_s population_t;
 
 typedef struct species_s
 {
-	int id, age;
+	unsigned int age; // How old is the species? 
+
 	double ave_fitness; // Average fitness of the species.
 	double max_fitness; // Max fitness of the species in its current evolution.
 	double peak_fitness; // Max fitness of the species since its creation.
 
-	int expected_offspring;
-	cbool novel;
-	cbool checked;
-	cbool obliterate;  //Allows killing off in competitive coevolution stagnation
+	vector* genomes; // Contains: genome_t*. Vector of genome organisms within the species.
 
-	vector* organisms; // Vector of organisms.
-
-	int age_of_last_improvement;  //If this is too long ago, the Species will goes extinct
-	double average_est; //When playing real-time allows estimating average fitness
+	unsigned char staleness;  //If this is too long ago, the Species will goes extinct
 } species_t; // Collection of Genomes that hold a specific trait.
 
-species_t* Species_Init(int i);
-species_t* Species_Init_Novel(int i, cbool n);
+// Base Constructor
+species_t* Species_Init();
 
+// Class Deconstructor, also frees memory.
 void Species_Delete(species_t* species);
 
-cbool Species_Rank(species_t* species);
+// Saves some species data to the file as a comment.
+cbool Species_Save(species_t* species, unsigned int id, FILE* f);
 
-//Perform mating and mutation to form next generation
-cbool Species_Reproduce(species_t *species, int generation, population_t* pop, vector *sorted_species);
+// Perform mating and mutation within the entire species to form the next generation.
+cbool Species_Reproduce(species_t *species, population_t* pop, unsigned int offspring_count, vector *children);
 
-// Return the first organism.
-organism_t* Species_First(species_t* species);
+// Perform mating and mutation on a single genome and return it.
+genome_t* Species_Reproduce_Single(species_t* species, population_t *pop);
 
-// Return the champion organism.
-organism_t* Species_Champion(species_t* species);
-
-cbool Species_Add_Organism(species_t* species, organism_t *organism);
-cbool Species_Remove_Organism(species_t *species, organism_t *organism);
-
-// Sorts species by fitness ranking.
-cbool Species_Rank(species_t *species);
-
-// Quicksort sorter functions. 
-
-//Sorts organisms by fitness.
-cbool Species_Order_By_Fitness(organism_t *x, organism_t *y);
-
-//Sorts species by their organism's original fitness.
-cbool Species_Order_By_Fitness_Orig(species_t *x, species_t *y);
-
-//Sorts species by their max fitness.
-cbool Species_Order_By_Fitness_Max(species_t *x, species_t *y);
-
-void Species_Adjust_Fitness(species_t *species);
-
-double Species_Compute_Max_Fitness(species_t *species);
+// Averages out the fitnesses of the genomes within a species.
 double Species_Compute_Average_Fitness(species_t *species);
 
-// Counts the number of offspring expected from all its members skim is for keeping 
-// track of remaining fractional parts of offspring and distributing them among species.
-double Species_Count_Offspring(species_t *species, double skim);
-
-cbool Species_FPrint(species_t* species, FILE* f);
+//Quicksort function for species by max fitness.
+cbool Species_Quicksort_By_Fitness(species_t *x, species_t *y);
 
 #endif // !__SPECIES_H__
