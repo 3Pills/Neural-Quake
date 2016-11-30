@@ -58,6 +58,30 @@ void Draw_Square(unsigned short x, unsigned short y, unsigned short w, unsigned 
 	eglColor3f(1, 1, 1);
 	eglEnable(GL_TEXTURE_2D);
 }
+
+void R_DrawPoint(vec3_t origin, double size, unsigned char c)
+{
+	byte *pal = (byte *)vid.d_8to24table;
+	eglColor3f(pal[c * 4] / 255.0, pal[c * 4 + 1] / 255.0, pal[c * 4 + 2] / 255.0);
+
+	eglDisable(GL_TEXTURE_2D);
+	eglDisable(GL_ALPHA_TEST);
+	eglEnable(GL_BLEND);
+
+	eglBegin (GL_LINES);
+	eglVertex3f (origin[0]-size, origin[1], origin[2]);
+	eglVertex3f (origin[0]+size, origin[1], origin[2]);
+	eglVertex3f (origin[0], origin[1]-size, origin[2]);
+	eglVertex3f (origin[0], origin[1]+size, origin[2]);
+	eglVertex3f (origin[0], origin[1], origin[2]-size);
+	eglVertex3f (origin[0], origin[1], origin[2]+size);
+	eglEnd ();
+
+	eglDisable(GL_BLEND);
+	eglEnable(GL_ALPHA_TEST);
+	eglEnable(GL_TEXTURE_2D);
+}
+
 #elif defined(GLQUAKE)
 void Draw_Line(unsigned short x1, unsigned short y1, unsigned short x2, unsigned short y2, float thickness, unsigned char c, float alpha)
 {
@@ -126,55 +150,13 @@ void R_DrawPoint (vec3_t origin, double size, unsigned char c)
 	eglEnable(GL_ALPHA_TEST);
 	eglEnable(GL_TEXTURE_2D);
 }
-
-void R_DrawWireBox(vec3_t origin, vec3_t mins, vec3_t maxs, unsigned char c)
-{
-	VectorAdd(origin, mins, mins);
-	VectorAdd(origin, maxs, maxs);
-
-	byte *pal = (byte *)vid.d_8to24table;
-	eglColor3f(pal[c * 4] / 255.0, pal[c * 4 + 1] / 255.0, pal[c * 4 + 2] / 255.0);
-
-	eglDisable(GL_TEXTURE_2D);
-	eglDisable(GL_ALPHA_TEST);
-	eglEnable(GL_BLEND);
-
-	eglBegin (GL_LINE_LOOP);
-	eglVertex3f(mins[0], mins[1], mins[2]);
-	eglVertex3f(mins[0], mins[1], maxs[2]);
-	eglVertex3f(maxs[0], mins[1], maxs[2]);
-	eglVertex3f(maxs[0], mins[1], mins[2]);
-
-	eglVertex3f(mins[0], mins[1], mins[2]);
-	eglVertex3f(mins[0], mins[1], maxs[2]);
-	eglVertex3f(mins[0], maxs[1], maxs[2]);
-	eglVertex3f(mins[0], maxs[1], mins[2]);
-
-	eglVertex3f(mins[0], maxs[1], mins[2]);
-	eglVertex3f(mins[0], maxs[1], maxs[2]);
-	eglVertex3f(maxs[0], maxs[1], maxs[2]);
-	eglVertex3f(maxs[0], maxs[1], mins[2]);
-
-	eglVertex3f(maxs[0], mins[1], mins[2]);
-	eglVertex3f(maxs[0], mins[1], maxs[2]);
-	eglVertex3f(maxs[0], maxs[1], maxs[2]);
-	eglVertex3f(maxs[0], maxs[1], mins[2]);
-
-	eglVertex3f(mins[0], maxs[1], mins[2]);
-	eglEnd ();
-
-	eglDisable(GL_BLEND);
-	eglEnable(GL_ALPHA_TEST);
-	eglEnable(GL_TEXTURE_2D);
-}
-
 #else
 void Draw_Line(unsigned short x1, unsigned short y1, unsigned short x2, unsigned short y2, float thickness, unsigned char c, float alpha)
 {
-	float x1 = CLAMP(0, _x1 + canvas.x, canvas.width);
-	float y1 = CLAMP(0, _y1 + canvas.y, canvas.height);
-	float x2 = CLAMP(0, _x2 + canvas.x, canvas.width);
-	float y2 = CLAMP(0, _y2 + canvas.y, canvas.height);
+	x1 = CLAMP(0, x1 + canvas.x, canvas.width);
+	y1 = CLAMP(0, y1 + canvas.y, canvas.height);
+	x2 = CLAMP(0, x2 + canvas.x, canvas.width);
+	y2 = CLAMP(0, y2 + canvas.y, canvas.height);
 
 	float xdiff = (x2 - x1);
 	float ydiff = (y2 - y1);
@@ -203,7 +185,8 @@ void Draw_Line(unsigned short x1, unsigned short y1, unsigned short x2, unsigned
 		float slope = ydiff / xdiff;
 		for (float x = xmin; x <= xmax; x += 1.0f) {
 			int y = y1 + ((x - xmin) * slope);
-			((byte*)vid.buffer + (int)y*vid.rowbytes + (int)x)[0] = c;
+			if (y >= 0 && y < canvas.height)
+				((byte*)vid.buffer + (int)y*vid.rowbytes + (int)x)[0] = c;
 		}
 	}
 	else {
@@ -224,15 +207,16 @@ void Draw_Line(unsigned short x1, unsigned short y1, unsigned short x2, unsigned
 		float slope = xdiff / ydiff;
 		for (float y = ymin; y <= ymax; y += 1.0f) {
 			int x = x1 + ((y - ymin) * slope);
-			((byte*)vid.buffer + (int)y*vid.rowbytes + (int)x)[0] = c;
+			if (x >= 0 && x < canvas.height)
+				((byte*)vid.buffer + (int)y*vid.rowbytes + (int)x)[0] = c;
 		}
 	}
 }
 
 void Draw_Square(unsigned short x, unsigned short y, unsigned short w, unsigned short h, float thickness, unsigned char c, float alpha)
 {
-	int min_x = _x + canvas.x;
-	int min_y = _y + canvas.y;
+	int min_x = x + canvas.x;
+	int min_y = y + canvas.y;
 	int max_x = min_x + w;
 	int max_y = min_y + h;
 
@@ -240,5 +224,11 @@ void Draw_Square(unsigned short x, unsigned short y, unsigned short w, unsigned 
 	Draw_Line(max_x, min_y, max_x, max_y, thickness, c, alpha);
 	Draw_Line(max_x, max_y, min_x, max_y, thickness, c, alpha);
 	Draw_Line(min_x, max_y, min_x, min_y, thickness, c, alpha);
+}
+
+
+void R_DrawPoint(vec3_t origin, double size, unsigned char c)
+{
+
 }
 #endif

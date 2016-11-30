@@ -43,6 +43,12 @@ void NQ_Init();
 //   after the client has received information on a server level transition.
 void NQ_Reload();
 
+// Neural network is stopped and generational data is saved, with note of success.
+//   Called in the CL_ParseServerInfo function within cl_parse.c, 
+//   after the client has received information that the server is now
+//   on the final tally screen of the level, which occurs on level completion.
+void NQ_Success();
+
 // Neural network input gathering and layer processing stage.
 //   Called in the CL_UpdateClient function within cl_main.c
 //   after the client has received all updates from the server

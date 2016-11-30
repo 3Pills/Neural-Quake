@@ -34,7 +34,7 @@ population_t *Population_Init(genome_t *g, unsigned int size)
 	if (pop == 0) return NULL;
 
 	pop->max_fitness = 0;
-	pop->generation = 0;
+	pop->generation = 1;
 	pop->winner_generation = 0;
 	pop->species = vector_init();
 	pop->innovation = 0;
@@ -113,8 +113,8 @@ void Population_Delete(population_t *pop)
 
 cbool Population_Save(population_t* pop, FILE* f)
 {
-	fprintf(f, "/* Neural Quake Generation [%d] */\n", pop->generation+1);
-	Con_Printf("/* Neural Quake Generation [%d] */\n", pop->generation+1);
+	fprintf(f, "/* Neural Quake Generation [%d] */\n", pop->generation);
+	Con_Printf("/* Neural Quake Generation [%d] */\n", pop->generation);
 
 	for (unsigned int i = 0; i < pop->species->count; i++)
 		Species_Save(pop->species->data[i], i+1, f);

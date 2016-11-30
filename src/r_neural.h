@@ -28,7 +28,6 @@ void Draw_Line(unsigned short x1, unsigned short y1, unsigned short x2, unsigned
 void Draw_Square(unsigned short x, unsigned short y, unsigned short w, unsigned short h, float thickness, unsigned char c, float alpha);
 
 void R_DrawPoint(vec3_t origin, double size, unsigned char c);
-void R_DrawWireBox(vec3_t origin, vec3_t mins, vec3_t maxs, unsigned char c);
 
 // Struct used for storing neural graph ui data for drawing.
 typedef struct uinode_s

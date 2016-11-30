@@ -24,13 +24,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct population_s
 {
-	vector* species; // Contains: species_t*. Vector array of species in the Population.
+	vector* species; // Contains: species_t*. Vector array of species in the population.
 
-	unsigned int innovation;
-	unsigned int generation;
+	unsigned int innovation; // The current innovation number of the population. Increments whenever an innovation is made.
+	unsigned int generation; // The current generation of the population, starting at 
 	unsigned int winner_generation; // The winning generation. Set when the player completes the level for the first time.
-
-	double max_fitness;
+	
+	double max_fitness; // The maximum fitness that has been achieved by the genomes within the population.
 } population_t;
 
 // Construct off of a single spawning Genome 

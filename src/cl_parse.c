@@ -450,8 +450,6 @@ void CL_ParseServerInfo (void)
 	memset(&dev_stats, 0, sizeof(dev_stats));
 	memset(&dev_peakstats, 0, sizeof(dev_peakstats));
 	memset(&dev_overflows, 0, sizeof(dev_overflows));
-
-	NQ_Reload ();
 }
 
 /*
@@ -1469,6 +1467,8 @@ void CL_ParseServerMessage (cbool *found_server_command)
 			}
 #endif
 			CL_ParseServerInfo ();
+			NQ_Reload(); // stephenkoren - reload neural network after server sends map changes.
+
 			vid.recalc_refdef = true;	// leave intermission full screen
 			break;
 
@@ -1668,6 +1668,7 @@ void CL_ParseServerMessage (cbool *found_server_command)
 				cl.intermission = 1;
 			cl.completed_time = cl.time;
 			vid.recalc_refdef = true;	// go to full screen
+			NQ_Success(); // stephenkoren -- The neural AI has reached the intermission screen - We completed a level!
 			break;
 
 		case svc_finale:

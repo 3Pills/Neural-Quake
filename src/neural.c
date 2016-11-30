@@ -50,7 +50,7 @@ static double timestep = 0.0;
 // Trace length is about a small corridor's length.
 // We keep it this short to keep the AI interested in 
 // traces that end in empty space, i.e. a place to go.
-static float trace_length = 325.0f;
+static float trace_length = 2000.0f;
 
 // Index of the current species within the population.
 static unsigned int curr_species = 0;
@@ -102,10 +102,40 @@ void NQ_Init()
 
 void NQ_Reload()
 {
+	if (!network_on) return;
+	
+	// Set spawn_set flag to false if we're on a new level.
+	// This will force the CL_NeuralThink function to get 
+	// the spawn location of the player, for use in novelty search.
 	if (strcmp(level_name, cl.worldname) != 0)
 	{
 		spawn_set = false;
 		strcpy(level_name, cl.worldname);
+	}
+}
+
+void NQ_Success()
+{
+	// If we're not on the intermission screen, return.
+	if (!network_on || cl.intermission != 1) return;
+
+	// Just make sure we haven't already marked this generation as the winner.
+	if (population->winner_generation != population->generation)
+	{
+		population->winner_generation = population->generation;
+
+		char buffer[255];
+		char final_cmd[255];
+		sprintf(buffer, "nq_save \"%%Y-%%m-%%d %%H-%%M-%%S %f ###WINNER###\"", population->max_fitness);
+
+		const time_t cur_time = time(NULL);
+		strftime(final_cmd, 255, buffer, localtime(&cur_time));
+
+		// Send a NQ_End command with a filename argument to end the network after saving this winning generation.
+		lparse_t *line = Line_Parse_Alloc(final_cmd, false);
+		NQ_Save(line);
+		Line_Parse_Free(line);
+		NQ_End(line);
 	}
 }
 
@@ -680,7 +710,7 @@ void NQ_GetInputs(double *values)
 					// We set floors and ceilings to a range between -1 and 0.
 					// We want them to illicate the opposite response to empty space
 					// (Avoid and look away from floors and ceilings).
-					node_value = (-fabs(DotProduct(up, trace.plane.normal)) + 0.5) * 1.5;
+					node_value = (-fabs(DotProduct(up, trace.plane.normal)) + 0.5) * 0.5;
 
 					// We also want to take into account the distance from these
 					// walls, so the further away the wall, the lower the input.
@@ -957,7 +987,7 @@ void Draw_NeuralStats()
 			c_snprintf2(str, "Species       |  %4i %4i", curr_species + 1, population->species->count);
 			Draw_String(x, (y++) * 8 - x, str);
 
-			c_snprintf2(str, "Generation    |  %4i %4i", population->generation + 1, ((population->winner_generation != 0) ? population->winner_generation + 1 : 0));
+			c_snprintf2(str, "Generation    |  %4i %4i", population->generation, ((population->winner_generation != 0) ? population->winner_generation : 0));
 			Draw_String(x, (y++) * 8 - x, str);
 
 			//c_snprintf2(str,	"Percentage   |  %4i %4i", 1, 1);
