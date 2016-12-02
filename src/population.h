@@ -51,9 +51,6 @@ void Population_Speciate(population_t *pop, genome_t *genome);
 // Clone population from a genome.
 cbool Population_Clone(population_t *pop, genome_t *g, unsigned int size, float power);
 
-// Compute the sparseness of a genome from other genomes in the population.
-double Population_Compute_Sparseness(genome_t *genome);
-
 // Compute the average fitness of every species in the population.
 double Population_Average_Fitness(population_t *pop);
 

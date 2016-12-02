@@ -212,6 +212,8 @@ void Population_Cull(population_t *pop, cbool champ_only)
 		species_t *species = pop->species->data[i];
 		Quicksort(0, species->genomes->count - 1, species->genomes->data, Genome_Quicksort_By_Fitness);
 
+		genome_t *genome_low = species->genomes->data[species->genomes->count-1], *genome_high = species->genomes->data[0];
+
 		unsigned int remaining = champ_only ? 1 : ceil(species->genomes->count / 2);
 		while (species->genomes->count > remaining && species->genomes->count > 0)
 		{
@@ -311,7 +313,7 @@ cbool Population_Epoch(population_t *pop)
 
 	// Make children from our champions until we have enough for a new population.
 	while (children->count + pop->species->count < NQ_POP_SIZE)
-		vector_push(children, Species_Reproduce_Single(pop->species->data[Random_Int(0, pop->species->count - 1)], pop));
+		vector_push(children, Species_Reproduce_Single(pop->species->data[Random_Int(0, pop->species->count - 1)], pop, true));
 
 	// Add our children into the species of the new generation.
 	for (unsigned int i = 0; i < children->count; i++)

@@ -18,9 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "gene.h"
-
 #include "neuron.h"
-#include "neural_def.h"
 #include "quakedef.h"
 
 gene_t* Gene_Init(double w, unsigned short inode, unsigned short onode, unsigned int innov)

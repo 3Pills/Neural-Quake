@@ -86,7 +86,7 @@ cbool Species_Reproduce(species_t *species, population_t* pop, unsigned int offs
 		}
 		else
 		{
-			child = Species_Reproduce_Single(species, pop);
+			child = Species_Reproduce_Single(species, pop, false);
 		}
 
 		vector_push(children, child);
@@ -94,85 +94,22 @@ cbool Species_Reproduce(species_t *species, population_t* pop, unsigned int offs
 	return true;
 }
 
-genome_t* Species_Reproduce_Single(species_t* species, population_t *pop)
+genome_t* Species_Reproduce_Single(species_t* species, population_t *pop, cbool breed_champ)
 {
 	genome_t *child = 0;
+	genome_t *g1 = species->genomes->data[(breed_champ ? 0 : Random_Int(0, species->genomes->count - 1))];
 
 	// Either crossover between two genomes, or just mutate a single genome.
 	if (Random_Float() < NQ_MATE_CROSSOVER_PROB)
 	{
-		genome_t *g1 = species->genomes->data[Random_Int(0, species->genomes->count - 1)];
 		genome_t *g2 = species->genomes->data[Random_Int(0, species->genomes->count - 1)];
 		child = Genome_Mate_Crossover(g1, g2);
 	}
 	else
-	{
-		genome_t *g1 = species->genomes->data[Random_Int(0, species->genomes->count - 1)];
 		child = Genome_Init_Copy(g1);
-	}
 
 	Genome_Mutate(child, pop);
 	return child;
-
-	/*
-	//First, decide whether to mate or mutate
-	//If there is only one organism in the pool, then always mutate
-	if ((Random_Float() < NQ_MUTATE_ONLY_PROB) || species->genomes->count - 1 == 0)
-	{
-	//Pick a random parent.
-	genome_t *g1 = species->genomes->data[Random_Int(0, species->genomes->count - 1)];
-	child = Genome_Init_Copy(g1);
-
-	//Mutate the child.
-	Genome_Mutate(child, pop);
-
-	return child;
-	}
-
-	// Choose one random parent
-	genome_t *g1 = species->genomes->data[Random_Int(0, Random_Int(0, species->genomes->count - 1))];
-	genome_t *g2 = 0;
-
-	//Choose the other from the same species if we're mating in it.
-	if (Random_Float() > NQ_INTERSPECIES_MATE_RATE)
-	{
-	g2 = species->genomes->data[Random_Int(0, Random_Int(0, species->genomes->count - 1))];
-	}
-	else
-	{
-	vector *sorted_species = Population_Get_Sorted_Species(pop);
-	//Mate outside Species
-	species_t *randspecies = species;
-
-	//Try to select a random species, tending towards better species, giving up after 5 attempts.
-	for (int i = 0; i < 5 && randspecies == species; i++)
-	{
-	randspecies = sorted_species->data[(int)floor((fmin(Random_Gauss() / 4, 1.0) * (sorted_species->count - 1)) + 0.5)];
-	if (randspecies->genomes == NULL) randspecies = species;
-	}
-
-	//New way: Make dad be a champ from the random species
-	g2 = randspecies->genomes->data[0];
-
-	vector_free_all(sorted_species);
-	}
-
-	//Perform mating based on probabilities of differrent mating types
-	if (Random_Float() < NQ_MATE_CROSSOVER_PROB)
-	child = Genome_Mate_Crossover(g1, g2);
-	if (Random_Float() < NQ_MATE_MULTIPOINT_PROB)
-	child = Genome_Mate_Multipoint(g1, g2);
-	else if (Random_Float() < NQ_MATE_MULTIPOINT_AVG_PROB / (NQ_MATE_MULTIPOINT_AVG_PROB + NQ_MATE_SINGLEPOINT_PROB))
-	child = Genome_Mate_Multipoint_Avg(g1, g2);
-	else
-	child = Genome_Mate_Singlepoint(g1, g2);
-
-	//if the probability is in favor or the mom and dad are the same genome then mutate.
-	if (Random_Float() > NQ_MATE_ONLY_PROB || g1 == g2 || Genome_Compatibility(g1, g2) == 0.0)
-	Genome_Mutate(child, pop);
-
-	return child;
-	*/
 }
 
 double Species_Compute_Average_Fitness(species_t *species)

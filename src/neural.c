@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "r_neural.h"
-#include "vector.h"
-#include "neural_def.h"
 #include "population.h"
 
 // Determines whether the network should be executing or not. 
@@ -36,7 +34,7 @@ static population_t *population = 0;
 static vector *inputs = 0;
 
 // Array of output values from the neural network.
-static char *outputs = 0;
+static short *outputs = 0;
 
 // Timer to restart the level when the AI idles or dies.
 static double timeout = 0.0;
@@ -50,7 +48,7 @@ static double timestep = 0.0;
 // Trace length is about a small corridor's length.
 // We keep it this short to keep the AI interested in 
 // traces that end in empty space, i.e. a place to go.
-static float trace_length = 2000.0f;
+static float trace_length = 1000.0f;
 
 // Index of the current species within the population.
 static unsigned int curr_species = 0;
@@ -324,7 +322,7 @@ void NQ_Start(lparse_t *line)
 
 	if (outputs == 0)
 	{ 
-		outputs = (char*)malloc(sizeof(*outputs) * genome->num_out);
+		outputs = (short*)malloc(sizeof(*outputs) * genome->num_out);
 		memset(outputs, 0, genome->num_out * sizeof(*outputs));
 	}
 
@@ -696,47 +694,78 @@ void NQ_GetInputs(double *values)
 
 			// We use the plane distance value as a color value, because we don't 
 			// need this information, and we need extra storage for debug colors.
-			trace.plane.dist = 40;
+			trace.plane.dist = 238;
 
-			// Initialize a default node_value of -1.0. This denotes empty space.
-			double node_value = -1.0;
+			// Initialize a default node_value of 0.0. This denotes empty space.
+			double node_value = 0.0;
 
 			if (trace.fraction != 1.0) // fraction is 1.0 if nothing was hit.
 			{
 				if (trace.ent->v.solid == SOLID_BSP) // We traced a world clip.
 				{
+					/*
+					// OLD ALGORITHMS.
+
+					// WALL NORMALS
 					vec3_t up = { 0, 0, 1 };
 
-					// We set floors and ceilings to a range between -1 and 0.
-					// We want them to illicate the opposite response to empty space
-					// (Avoid and look away from floors and ceilings).
-					node_value = (-fabs(DotProduct(up, trace.plane.normal)) + 0.5) * 0.5;
+					// We set collisions to a range between -1 and 1.
+					node_value = DotProduct(up, trace.plane.normal);
 
 					// We also want to take into account the distance from these
 					// walls, so the further away the wall, the lower the input.
 					node_value *= (1.0 - trace.fraction);
 
-					trace.plane.dist = (int)(239 + node_value * 3);
+					trace.plane.dist = (int)(232 + node_value * 7);
+
+
+					// WALLS : CLOSE = BAD / FAR = GOOD
+					float closeLimit = 128;
+					float farLimit = 384;
+					float maxLimit = farLimit + 256;
+					if (trace.fraction * trace_length < closeLimit)
+					{
+						node_value = -1.0 + (trace.fraction * trace_length) / closeLimit;
+					}
+					else if (trace.fraction * trace_length > farLimit)
+					{
+						node_value = fmin((trace.fraction * trace_length - farLimit) / (maxLimit - farLimit), 1);
+					}
+
+					// WALLS : CLOSE = BAD / FAR = GOOD 2.
+					// Get a range between -1 and 1 based on how close the wall is to the AI.
+					node_value = ((trace.fraction - 0.5) * trace_length * 2) / trace_length;
+
+
+					trace.plane.dist = (int)(235 + node_value * 3);
+					
+
+					// WALLS: REALLY CLOSE = BAD
+					float closeLimit = 96;
+					if (trace.fraction * trace_length < closeLimit)
+					{
+						node_value = -1.0 + (trace.fraction * trace_length) / closeLimit;
+						trace.plane.dist = (int)(232 + node_value * 7);
+					}
+					*/
+
+					// WALL NORMALS
+					vec3_t up = { 0, 0, 1 };
+
+					// We set collisions to a range between -1 and 1.
+					node_value = DotProduct(up, trace.plane.normal);
+
+					// We also want to take into account the distance from these
+					// walls, so the further away the wall, the lower the input.
+					node_value *= (1.0 - trace.fraction);
+
+					trace.plane.dist = (int)(232 + node_value * 7);
 				}
 				else // It's an entity of some kind!
-				{
-					node_value = -1.0;
-					trace.plane.dist = 79;
-				}
-				/*
-				// If we're at 5 specific nodes, look for entities, rather than boundaries.
-				if ((midX && (i == (int)(NQ_INPUT_ROWS * 0.5) || i == (int)(NQ_INPUT_ROWS * 0.4) || i == (int)(NQ_INPUT_ROWS * 0.6))) ||
-					(midY && (j == (int)(NQ_INPUT_COLS * 0.5) || j == (int)(NQ_INPUT_COLS * 0.4) || j == (int)(NQ_INPUT_COLS * 0.6))))
 				{
 					node_value = 1.0;
 					trace.plane.dist = 79;
 				}
-
-				else
-				{
-
-				}
-				*/
 			}
 
 			values[j + NQ_INPUT_COLS*i] = node_value;
@@ -774,7 +803,10 @@ void NQ_Evaluate(genome_t* genome)
 
 	// Take the value of each output in the network into the global output vector for use with inputs.
 	for (unsigned int i = genome->num_in; i < (unsigned int)(genome->num_in + genome->num_out); i++)
-		outputs[i - genome->num_in] = round(((neuron_t*)genome->neurons->data[i])->value);
+	{
+		double output_value = ((neuron_t*)genome->neurons->data[i])->value;
+		outputs[i - genome->num_in] = round(output_value);
+	}
 
 	// Process output value into the graph HUD element.
 	for (unsigned int i = 0; i < uilinks->count; i++)
@@ -897,13 +929,7 @@ void NQ_Timeout()
 	species_t *species = population->species->data[curr_species];
 	genome_t *genome = species->genomes->data[curr_genome];
 
-	// Add the in-game clock timer to the organism when done.
-	// genome->time_alive = cl.time;
-
-	// Store the player's current position as the organisms final position.
-	VectorCopy(cl_entities[cl.viewentity].origin, genome->final_pos);
-
-	// Add the final position of the organism to the global list.
+	// Add the final position of the organism to the novelty space list.
 	vec3_t *final_pos = malloc(sizeof(*final_pos));
 
 	*(*final_pos + 0) = cl_entities[cl.viewentity].origin[0];
@@ -911,6 +937,10 @@ void NQ_Timeout()
 	*(*final_pos + 2) = cl_entities[cl.viewentity].origin[2];
 
 	vector_push(distance_storage, final_pos);
+	
+	// Pop the first position off the storage list if we have too many.
+	if (distance_storage->count > NQ_NOVELTY_DROPOFF)
+		vector_delete(distance_storage, 0);
 
 	timeout = 0;
 	timeout_moving = 0;

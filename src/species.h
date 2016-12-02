@@ -51,7 +51,7 @@ cbool Species_Save(species_t* species, unsigned int id, FILE* f);
 cbool Species_Reproduce(species_t *species, population_t* pop, unsigned int offspring_count, vector *children);
 
 // Perform mating and mutation on a single genome and return it.
-genome_t* Species_Reproduce_Single(species_t* species, population_t *pop);
+genome_t* Species_Reproduce_Single(species_t* species, population_t *pop, cbool breed_champ);
 
 // Averages out the fitnesses of the genomes within a species.
 double Species_Compute_Average_Fitness(species_t *species);

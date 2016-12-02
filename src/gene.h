@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdio.h>
 #include "environment.h"
 #include "vector.h"
+#include "neural_def.h"
 
 //Type definitions for our neural network.
 typedef struct gene_s

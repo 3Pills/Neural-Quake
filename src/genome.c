@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "genome.h"
 #include "neural.h"
-#include "neural_def.h"
 #include "population.h"
 
 //Constructor which takes full genome specs and puts them into the new one
@@ -36,8 +35,6 @@ genome_t* Genome_Init(vector* genes, unsigned short num_in, unsigned short num_o
 	genome->global_rank = 0;
 	genome->num_in = num_in;
 	genome->num_out = num_out;
-
-	memset(genome->final_pos, 0, sizeof(float) * 3);
 
 	return genome;
 }
@@ -59,7 +56,6 @@ genome_t *Genome_Init_Copy(genome_t *genome)
 	newgenome->fitness = genome->fitness;
 	newgenome->global_rank = genome->global_rank;
 
-	VectorCopy(genome->final_pos, newgenome->final_pos);
 	return newgenome;
 }
 

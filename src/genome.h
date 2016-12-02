@@ -39,7 +39,6 @@ typedef struct population_s population_t;
 typedef struct genome_s
 {
 	unsigned int fitness; // Determined fitness of the Genome.
-	vec3_t final_pos; // Final position of the genome before evaluation finished.
 
 	unsigned short num_in; // Number of inputs within the genome.
 	unsigned short num_out; // Number of outputs within the genome.

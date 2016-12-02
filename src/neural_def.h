@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // Genetic algorithm definitions 
 
-#define NQ_POP_SIZE 100
+#define NQ_POP_SIZE 50
 #define NQ_TIMEOUT 2 // Time in seconds before reload after player idles.
 #define NQ_TIMEOUT_MOVING 5 // Time in seconds before reload whilst player is moving in a small area.  
 
@@ -40,6 +40,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NQ_DELTA_WEIGHTS 0.4 // Max allowable interspecies difference in total genome weight.
 
 #define NQ_NOVELTY_COEFF 15 // k constant for novelty search
+#define NQ_NOVELTY_DROPOFF 150 // Amount of previously evaluated positions to be considered during novelty search.
 
 #define NQ_MUTATE_RAND_TRAIT_PROB 0.1 // Chance for random trait to mutate during reproduction.
 #define NQ_MUTATE_LINK_TRAIT_PROB 0.1 // Chance for link trait to mutate during reproduction.
@@ -54,7 +55,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NQ_MUTATE_GENE_TOGGLE_PROB 0.1 // Chance for mutation to toggle a gene on or off.
 #define NQ_MUTATE_GENE_ENABLE_PROB 0.05 // Change for mutation to re-enable a disable gene.
 
-#define NQ_DROPOFF_AGE 15 // The age at which a specie will be killed off.
+#define NQ_DROPOFF_AGE 15 // The age at which a species will be killed off.
 
 #define NQ_NEWLINK_TRIES 20 // Dictates how many times a new link mutation should be attempted during species reproduction.
 #define NQ_NEWNODE_TRIES 20 // Dictates how many times a new node mutation should be attempted during species reproduction.
